@@ -27,6 +27,13 @@ public class SecurityConfig {
             // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // Cho phép truy cập tài liệu OpenAPI và giao diện Swagger mà không cần đăng nhập.
+                .requestMatchers(
+                    "/v3/api-docs/**",
+                    "/v3/api-docs.yaml",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html"
+                ).permitAll()
                 // Cho phép người chưa đăng nhập gọi API đăng ký tài khoản.
                 .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
                 // Tất cả endpoint còn lại đều yêu cầu người dùng đã được xác thực.
