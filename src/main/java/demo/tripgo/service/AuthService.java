@@ -39,12 +39,16 @@ public class AuthService {
         this.jwtService = jwtService;
     }
 
+    // Xóa khoảng trắng và chuyển email thành chữ thường để kiểm tra nhất quán.
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
     // Đảm bảo toàn bộ quá trình đăng ký chạy trong một transaction.
     // Nếu có lỗi xảy ra, mọi thay đổi database trong hàm này sẽ được rollback.
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
-        // Xóa khoảng trắng và chuyển email thành chữ thường để kiểm tra nhất quán.
-        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+        String normalizedEmail = normalizeEmail(request.email());
         // Email được lưu dạng chữ thường, so sánh trực tiếp để có thể dùng index trên email.
         if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException(normalizedEmail);
@@ -57,9 +61,10 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
+        String normalizedEmail = normalizeEmail(request.email());
 
         User user = userRepository
-            .findByEmail(request.email())
+            .findByEmail(normalizedEmail)
             .orElseThrow(() ->
                 new InvalidCredentialsException(
                     "Invalid email or password"
@@ -83,15 +88,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(user);
 
-        UserResponse userResponse =
-            new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getRole(),
-                user.getStatus().name(),
-                user.getCreatedAt()
-            );
+        UserResponse userResponse = userMapper.toUserResponse(user);
 
         return new LoginResponse(
             "Login successful",

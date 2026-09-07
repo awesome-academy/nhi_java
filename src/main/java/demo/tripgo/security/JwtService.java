@@ -3,6 +3,7 @@ package demo.tripgo.security;
 import demo.tripgo.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -42,15 +43,20 @@ public class JwtService {
     }
 
     public Claims extractClaims(String token) {
-        return Jwts.parser()
+        Claims claims = Jwts.parser()
             .verifyWith(secretKey)
             .build()
             .parseSignedClaims(token)
             .getPayload();
-    }
 
-    public String extractEmail(String token) {
-        return extractClaims(token).getSubject();
+        if (claims.get("userId", Number.class) == null) {
+            throw new JwtException("Missing userId claim");
+        }
+        Date expiry = claims.getExpiration();
+        if (expiry == null || !expiry.after(new Date())) {
+            throw new JwtException("Missing or expired exp claim");
+        }
+        return claims;
     }
 
     public Long extractUserId(String token) {
@@ -58,21 +64,5 @@ public class JwtService {
             extractClaims(token).get("userId", Number.class);
 
         return userId.longValue();
-    }
-
-    public String extractRole(String token) {
-        return extractClaims(token).get("role", String.class);
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            Claims claims = extractClaims(token);
-
-            return claims.getExpiration()
-                .after(new Date());
-
-        } catch (Exception e) {
-            return false;
-        }
     }
 }

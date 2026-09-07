@@ -1,6 +1,7 @@
 package demo.tripgo.config;
 
-import demo.tripgo.service.JwtAuthenticationFilter;
+import demo.tripgo.security.JwtAuthenticationFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,15 +18,22 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter)
-    {
-        this.jwtAuthenticationFilter =
-            jwtAuthenticationFilter;
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
     // Mã hóa mật khẩu bằng BCrypt trước khi lưu vào database.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    // Chỉ chạy JWT filter trong security chain, không đăng ký thêm ở servlet container.
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+            new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     // Cấu hình các quy tắc bảo mật được áp dụng trước khi request đi vào Controller.
@@ -34,6 +42,13 @@ public class SecurityConfig {
         http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
             .csrf(AbstractHttpConfigurer::disable)
+            .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(
+                (request, response, exception) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"message\":\"Authentication required: provide a valid Bearer token\"}");
+                }
+            ))
             // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
@@ -73,18 +88,18 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
                 .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
-                .requestMatchers(HttpMethod.POST, "/admin/tours").authenticated()
+                .requestMatchers(HttpMethod.POST, "/admin/tours").hasRole("ADMIN")
                 .requestMatchers(
                     HttpMethod.PUT,
                     "/admin/tours/*"
-                ).authenticated()
+                ).hasRole("ADMIN")
                 .requestMatchers(
                     HttpMethod.DELETE,
                     "/admin/tours/*"
-                ).authenticated()
+                ).hasRole("ADMIN")
 
-                // Các API không nằm trong danh sách cần JWT vẫn được truy cập công khai.
-                .anyRequest().permitAll()
+                // Mọi endpoint chưa được liệt kê ở trên đều yêu cầu xác thực.
+                .anyRequest().authenticated()
             )
             .addFilterBefore(
                 jwtAuthenticationFilter,

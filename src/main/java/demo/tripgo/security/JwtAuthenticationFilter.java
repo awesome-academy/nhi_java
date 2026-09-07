@@ -1,12 +1,14 @@
-package demo.tripgo.service;
+package demo.tripgo.security;
 
 import demo.tripgo.entity.User;
+import demo.tripgo.entity.UserStatus;
+import io.jsonwebtoken.JwtException;
 import demo.tripgo.repository.UserRepository;
-import demo.tripgo.security.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,9 +35,9 @@ public class JwtAuthenticationFilter
 
     @Override
     protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain
+        @NonNull HttpServletRequest request,
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String authHeader = request.getHeader("Authorization");
 
@@ -46,31 +48,26 @@ public class JwtAuthenticationFilter
 
         String token = authHeader.substring(7);
 
-        if (!jwtService.isTokenValid(token)) {
-            response.setStatus(
-                HttpServletResponse.SC_UNAUTHORIZED
-            );
-
-            response.setContentType(
-                "application/json"
-            );
-
-            response.getWriter().write(
-                "{\"message\":\"Invalid or expired token\"}"
-            );
-
-            return;
+        Long userId = null;
+        try {
+            // Parse and validate signature, expiry and required userId in one call.
+            userId = jwtService.extractUserId(token);
+        } catch (JwtException | IllegalArgumentException exception) {
+            // Invalid tokens leave the request unauthenticated.
         }
 
-        Long userId = jwtService.extractUserId(token);
+        // Authorization rules decide whether anonymous access is allowed.
+        if (userId == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         User user = userRepository
             .findById(userId)
             .orElse(null);
 
-        if (user == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
+        if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+            filterChain.doFilter(request, response);
             return;
         }
 
