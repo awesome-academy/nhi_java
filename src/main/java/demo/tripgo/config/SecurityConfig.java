@@ -1,5 +1,6 @@
 package demo.tripgo.config;
 
+import demo.tripgo.service.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,10 +10,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter)
+    {
+        this.jwtAuthenticationFilter =
+            jwtAuthenticationFilter;
+    }
     // Mã hóa mật khẩu bằng BCrypt trước khi lưu vào database.
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -22,11 +31,15 @@ public class SecurityConfig {
     // Cấu hình các quy tắc bảo mật được áp dụng trước khi request đi vào Controller.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        return http
+        http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
             .csrf(AbstractHttpConfigurer::disable)
             // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
+            )
             .authorizeHttpRequests(auth -> auth
                 // Cho phép truy cập tài liệu khi bật; profile prod tắt Springdoc trong application-prod.yaml.
                 .requestMatchers(
@@ -35,12 +48,49 @@ public class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui.html"
                 ).permitAll()
-                // Cho phép người chưa đăng nhập gọi API đăng ký tài khoản.
+                // Cho phép người chưa đăng nhập gọi API đăng ký và đăng nhập.
                 // Matcher không gồm context-path /api/v1 vì servlet container đã tách phần này.
-                .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
-                // Tất cả endpoint còn lại đều yêu cầu người dùng đã được xác thực.
-                .anyRequest().authenticated()
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/auth/register",
+                    "/auth/login"
+                ).permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
+
+                .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
+
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/bookings"
+                ).authenticated()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/bookings",
+                    "/bookings/*"
+                ).authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/bookings/*/cancel").authenticated()
+                .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
+                .requestMatchers(HttpMethod.POST, "/admin/tours").authenticated()
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/admin/tours/*"
+                ).authenticated()
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/admin/tours/*"
+                ).authenticated()
+
+                // Các API không nằm trong danh sách cần JWT vẫn được truy cập công khai.
+                .anyRequest().permitAll()
             )
-            .build();
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
     }
 }

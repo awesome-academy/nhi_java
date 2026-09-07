@@ -1,11 +1,17 @@
 package demo.tripgo.service;
 
+import demo.tripgo.dto.request.LoginRequest;
 import demo.tripgo.dto.request.RegisterRequest;
+import demo.tripgo.dto.response.LoginResponse;
 import demo.tripgo.dto.response.RegisterResponse;
+import demo.tripgo.dto.response.UserResponse;
 import demo.tripgo.entity.User;
+import demo.tripgo.entity.UserStatus;
 import demo.tripgo.exception.EmailAlreadyExistsException;
+import demo.tripgo.exception.InvalidCredentialsException;
 import demo.tripgo.mapper.UserMapper;
 import demo.tripgo.repository.UserRepository;
+import demo.tripgo.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,15 +25,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     // Chuyển đổi giữa RegisterRequest, User entity và RegisterResponse.
     private final UserMapper userMapper;
+    private final JwtService jwtService;
 
     public AuthService(
         UserRepository userRepository,
         PasswordEncoder passwordEncoder,
-        UserMapper userMapper
+        UserMapper userMapper,
+        JwtService jwtService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
+        this.jwtService = jwtService;
     }
 
     // Đảm bảo toàn bộ quá trình đăng ký chạy trong một transaction.
@@ -45,5 +54,50 @@ public class AuthService {
         String encodedPassword = passwordEncoder.encode(request.password());
         User savedUser = userRepository.save(userMapper.toEntity(request, normalizedEmail, encodedPassword));
         return userMapper.toRegisterResponse(savedUser);
+    }
+
+    public LoginResponse login(LoginRequest request) {
+
+        User user = userRepository
+            .findByEmail(request.email())
+            .orElseThrow(() ->
+                new InvalidCredentialsException(
+                    "Invalid email or password"
+                )
+            );
+
+        if (!passwordEncoder.matches(
+                request.password(),
+                user.getPassword()
+        )) {
+            throw new InvalidCredentialsException(
+                "Invalid email or password"
+            );
+        }
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new InvalidCredentialsException(
+                "User account is not active"
+            );
+        }
+
+        String token = jwtService.generateToken(user);
+
+        UserResponse userResponse =
+            new UserResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getRole(),
+                user.getStatus().name(),
+                user.getCreatedAt()
+            );
+
+        return new LoginResponse(
+            "Login successful",
+            token,
+            "Bearer",
+            userResponse
+        );
     }
 }
