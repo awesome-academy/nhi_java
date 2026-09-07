@@ -10,6 +10,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Locale;
+
 @Service
 public class AuthService {
 
@@ -33,15 +35,15 @@ public class AuthService {
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
         // Xóa khoảng trắng và chuyển email thành chữ thường để kiểm tra nhất quán.
-        String normalizedEmail = request.email().trim().toLowerCase();
-        // Kiểm tra email đã tồn tại hay chưa, không phân biệt chữ hoa và chữ thường.
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+        // Email được lưu dạng chữ thường, so sánh trực tiếp để có thể dùng index trên email.
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new EmailAlreadyExistsException(normalizedEmail);
         }
 
         // Mã hóa mật khẩu gốc bằng BCrypt trước khi đưa vào User entity.
         String encodedPassword = passwordEncoder.encode(request.password());
-        User savedUser = userRepository.save(userMapper.toEntity(request, encodedPassword));
+        User savedUser = userRepository.save(userMapper.toEntity(request, normalizedEmail, encodedPassword));
         return userMapper.toRegisterResponse(savedUser);
     }
 }

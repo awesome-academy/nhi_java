@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,14 +21,14 @@ public class SecurityConfig {
 
     // Cấu hình các quy tắc bảo mật được áp dụng trước khi request đi vào Controller.
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         return http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Cho phép truy cập tài liệu OpenAPI và giao diện Swagger mà không cần đăng nhập.
+                // Cho phép truy cập tài liệu khi bật; profile prod tắt Springdoc trong application-prod.yaml.
                 .requestMatchers(
                     "/v3/api-docs/**",
                     "/v3/api-docs.yaml",
@@ -35,6 +36,7 @@ public class SecurityConfig {
                     "/swagger-ui.html"
                 ).permitAll()
                 // Cho phép người chưa đăng nhập gọi API đăng ký tài khoản.
+                // Matcher không gồm context-path /api/v1 vì servlet container đã tách phần này.
                 .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
                 // Tất cả endpoint còn lại đều yêu cầu người dùng đã được xác thực.
                 .anyRequest().authenticated()

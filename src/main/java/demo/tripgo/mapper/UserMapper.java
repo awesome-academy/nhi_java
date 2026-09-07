@@ -11,10 +11,10 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     // Chuyển dữ liệu đăng ký từ DTO thành User entity để lưu vào database.
-    public User toEntity(RegisterRequest request, String encodedPassword) {
+    public User toEntity(RegisterRequest request, String normalizedEmail, String encodedPassword) {
         User user = new User();
         user.setFullName(request.fullName().trim());
-        user.setEmail(request.email().trim().toLowerCase());
+        user.setEmail(normalizedEmail);
         // Chỉ lưu mật khẩu đã được PasswordEncoder mã hóa
         user.setPassword(encodedPassword);
         user.setRole(Role.USER);
