@@ -7,6 +7,8 @@ import demo.tripgo.dto.response.RegisterResponse;
 import demo.tripgo.service.AuthService;
 import demo.tripgo.dto.response.UserResponse;
 import demo.tripgo.entity.User;
+import demo.tripgo.exception.InvalidCredentialsException;
+import demo.tripgo.mapper.UserMapper;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import jakarta.validation.Valid;
@@ -22,14 +24,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserMapper userMapper;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserMapper userMapper) {
         this.authService = authService;
+        this.userMapper = userMapper;
     }
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(authService.currentUser(user));
+        // AuthenticationPrincipalArgumentResolver trả null (không ném lỗi) nếu principal thực tế
+        // không phải kiểu User — chặn tại đây để trả 401 rõ ràng thay vì để NPE lọt ra ngoài.
+        if (user == null) {
+            throw new InvalidCredentialsException("Authentication required");
+        }
+        return ResponseEntity.ok(userMapper.toUserResponse(user));
     }
 
     @PostMapping("/register")
