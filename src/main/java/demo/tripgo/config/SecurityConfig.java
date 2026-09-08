@@ -1,6 +1,7 @@
 package demo.tripgo.config;
 
 import demo.tripgo.security.JwtAuthenticationFilter;
+import demo.tripgo.security.SecurityErrorResponder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +18,14 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SecurityErrorResponder securityErrorResponder;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        SecurityErrorResponder securityErrorResponder
+    ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.securityErrorResponder = securityErrorResponder;
     }
     // Mã hóa mật khẩu bằng BCrypt trước khi lưu vào database.
     @Bean
@@ -42,19 +48,25 @@ public class SecurityConfig {
         http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
             .csrf(AbstractHttpConfigurer::disable)
-            .exceptionHandling(exceptions -> exceptions.authenticationEntryPoint(
-                (request, response, exception) -> {
-                    response.setStatus(401);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"message\":\"Authentication required: provide a valid Bearer token\"}");
-                }
-            ))
-            // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
+            // 401 (chưa xác thực) và 403 (thiếu quyền) đều trả ErrorResponse như GlobalExceptionHandler,
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, exception) ->
+                    securityErrorResponder.write(
+                        response,
+                        401,
+                        "Authentication required: provide a valid Bearer token"
+                    )
+                )
+                .accessDeniedHandler((request, response, exception) ->
+                    securityErrorResponder.write(
+                        response,
+                        403,
+                        "You do not have permission to access this resource"
+                    )
                 )
             )
+            // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Cho phép truy cập tài liệu khi bật; profile prod tắt Springdoc trong application-prod.yaml.
                 .requestMatchers(

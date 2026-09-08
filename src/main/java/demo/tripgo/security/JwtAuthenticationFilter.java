@@ -4,6 +4,8 @@ import demo.tripgo.entity.User;
 import demo.tripgo.entity.UserStatus;
 import io.jsonwebtoken.JwtException;
 import demo.tripgo.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,8 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter
         extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -54,6 +58,7 @@ public class JwtAuthenticationFilter
             userId = jwtService.extractUserId(token);
         } catch (JwtException | IllegalArgumentException exception) {
             // Invalid tokens leave the request unauthenticated.
+            log.debug("Invalid JWT: {}", exception.getMessage());
         }
 
         // Authorization rules decide whether anonymous access is allowed.
