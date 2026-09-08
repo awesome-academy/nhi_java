@@ -1,12 +1,14 @@
 package demo.tripgo.exception;
 
 import demo.tripgo.dto.response.ErrorResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -61,5 +63,47 @@ public class GlobalExceptionHandler {
             LocalDateTime.now()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleResourceNotFound(ResourceNotFoundException exception) {
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.NOT_FOUND.value(),
+            exception.getMessage(),
+            Map.of(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    // Vi phạm ràng buộc trên query param (vd page<1, limit vượt trần) → 400.
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException exception) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        exception.getConstraintViolations().forEach(violation -> {
+            String field = violation.getPropertyPath().toString();
+            // propertyPath dạng "method.param"; chỉ giữ tên param cho gọn.
+            String param = field.contains(".") ? field.substring(field.lastIndexOf('.') + 1) : field;
+            errors.putIfAbsent(param, violation.getMessage());
+        });
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Validation failed",
+            errors,
+            LocalDateTime.now()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    // Giá trị tham số truy vấn không hợp lệ (sort/category lạ) hoặc sai kiểu (số không parse được) → 400.
+    @ExceptionHandler({InvalidRequestParameterException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            exception.getMessage(),
+            Map.of(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.badRequest().body(response);
     }
 }
