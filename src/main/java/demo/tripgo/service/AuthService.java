@@ -97,4 +97,8 @@ public class AuthService {
             userResponse
         );
     }
+
+    public UserResponse currentUser(User user) {
+        return userMapper.toUserResponse(user);
+    }
 }

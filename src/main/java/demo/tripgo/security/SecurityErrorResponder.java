@@ -1,6 +1,6 @@
 package demo.tripgo.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import demo.tripgo.dto.response.ErrorResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
