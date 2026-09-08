@@ -25,15 +25,19 @@ public class UserMapper {
     public RegisterResponse toRegisterResponse(User user) {
         return new RegisterResponse(
             "Registration successful",
-            // Chỉ trả thông tin cần thiết; không đưa mật khẩu vào response.
-            new UserResponse(
-                user.getId(),
-                user.getFullName(),
-                user.getEmail(),
-                user.getRole(),
-                user.getStatus().name(),
-                user.getCreatedAt()
-            )
+            toUserResponse(user)
+        );
+    }
+
+    // Chỉ trả thông tin cần thiết; không đưa mật khẩu vào response.
+    public UserResponse toUserResponse(User user) {
+        return new UserResponse(
+            user.getId(),
+            user.getFullName(),
+            user.getEmail(),
+            user.getRole(),
+            user.getStatus().name(),
+            user.getCreatedAt()
         );
     }
 }

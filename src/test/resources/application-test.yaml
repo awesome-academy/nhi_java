@@ -8,3 +8,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+# Public test fixture only; never use this key outside the test profile.
+jwt:
+  secret: test-only-jwt-signing-key-not-for-production-0123456789
+  expiration: 86400000

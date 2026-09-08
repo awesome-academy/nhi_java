@@ -1,6 +1,8 @@
 package demo.tripgo.controller;
 
+import demo.tripgo.dto.request.LoginRequest;
 import demo.tripgo.dto.request.RegisterRequest;
+import demo.tripgo.dto.response.LoginResponse;
 import demo.tripgo.dto.response.RegisterResponse;
 import demo.tripgo.service.AuthService;
 import jakarta.validation.Valid;
@@ -24,5 +26,15 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+
+        return ResponseEntity.ok(
+                authService.login(request)
+        );
     }
 }

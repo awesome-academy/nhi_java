@@ -2,9 +2,11 @@ package demo.tripgo.controller;
 
 import demo.tripgo.repository.UserRepository;
 import demo.tripgo.entity.User;
+import demo.tripgo.entity.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -36,6 +38,113 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Test
+    void loginReturnsTokenAndUserWithoutPassword() throws Exception {
+        registerLoginUser("login-success@example.com");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contextPath("/api/v1").servletPath("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"email":"login-success@example.com","password":"password123"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.user.email").value("login-success@example.com"))
+            .andExpect(jsonPath("$.user.password").doesNotHaveJsonPath());
+    }
+
+    @Test
+    void loginAcceptsDifferentEmailCaseAfterRegistration() throws Exception {
+        registerLoginUser("Login.Mixed.Case@Example.com");
+
+        for (String email : new String[]{"login.mixed.case@example.com", "LOGIN.MIXED.CASE@EXAMPLE.COM"}) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                    .contextPath("/api/v1").servletPath("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {"email":"%s","password":"password123"}
+                        """.formatted(email)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.email").value("login.mixed.case@example.com"))
+                .andExpect(jsonPath("$.user.password").doesNotHaveJsonPath());
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"BLOCKED", "INACTIVE"})
+    void loginRejectsNonActiveAccount(UserStatus accountStatus) throws Exception {
+        String email = "login-status-" + accountStatus.name().toLowerCase(java.util.Locale.ROOT) + "@example.com";
+        registerLoginUser(email);
+        User user = userRepository.findByEmail(email).orElseThrow();
+        user.setStatus(accountStatus);
+        userRepository.saveAndFlush(user);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                .contextPath("/api/v1").servletPath("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"email":"%s","password":"password123"}
+                    """.formatted(email)))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.message").value("User account is not active"))
+            .andExpect(jsonPath("$.errors").isEmpty())
+            .andExpect(jsonPath("$.timestamp").isNotEmpty())
+            .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
+    }
+
+    private void registerLoginUser(String email) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                .contextPath("/api/v1").servletPath("/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"fullName":"Login Test","email":"%s","password":"password123"}
+                    """.formatted(email)))
+            .andExpect(status().isCreated());
+    }
+
+    @Test
+    void shortIncorrectPasswordReturns401() throws Exception {
+        User user = new User();
+        user.setFullName("Login Test");
+        user.setEmail("short-login@example.com");
+        user.setPassword(passwordEncoder.encode("password123"));
+        user.setRole(demo.tripgo.entity.Role.USER);
+        userRepository.save(user);
+
+        for (String password : new String[]{"1", "1234567", "wrongpassword"}) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                    .contextPath("/api/v1").servletPath("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {"email":"short-login@example.com","password":"%s"}
+                        """.formatted(password)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.errors").isMap())
+                .andExpect(jsonPath("$.errors").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
+        }
+    }
+
+    @Test
+    void missingOrBlankLoginPasswordReturns400() throws Exception {
+        for (String body : new String[]{
+                "{\"email\":\"login@example.com\"}",
+                "{\"email\":\"login@example.com\",\"password\":\" \"}"}) {
+            mockMvc.perform(post("/api/v1/auth/login")
+                    .contextPath("/api/v1").servletPath("/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.password").value("Password is required"));
+        }
+    }
 
     @Test
     void normalizesEmailAndRejectsDuplicateWithDifferentCase() throws Exception {

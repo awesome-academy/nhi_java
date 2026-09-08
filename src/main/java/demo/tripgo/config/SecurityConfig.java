@@ -1,5 +1,8 @@
 package demo.tripgo.config;
 
+import demo.tripgo.security.JwtAuthenticationFilter;
+import demo.tripgo.security.SecurityErrorResponder;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,22 +12,59 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SecurityErrorResponder securityErrorResponder;
+
+    public SecurityConfig(
+        JwtAuthenticationFilter jwtAuthenticationFilter,
+        SecurityErrorResponder securityErrorResponder
+    ) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.securityErrorResponder = securityErrorResponder;
+    }
     // Mã hóa mật khẩu bằng BCrypt trước khi lưu vào database.
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Chỉ chạy JWT filter trong security chain, không đăng ký thêm ở servlet container.
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration =
+            new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
     // Cấu hình các quy tắc bảo mật được áp dụng trước khi request đi vào Controller.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        return http
+        http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
             .csrf(AbstractHttpConfigurer::disable)
+            // 401 (chưa xác thực) và 403 (thiếu quyền) đều trả ErrorResponse như GlobalExceptionHandler,
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, exception) ->
+                    securityErrorResponder.write(
+                        response,
+                        401,
+                        "Authentication required: provide a valid Bearer token"
+                    )
+                )
+                .accessDeniedHandler((request, response, exception) ->
+                    securityErrorResponder.write(
+                        response,
+                        403,
+                        "You do not have permission to access this resource"
+                    )
+                )
+            )
             // Không tạo hoặc lưu session đăng nhập trên server; mỗi request phải tự gửi thông tin xác thực.
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -35,12 +75,49 @@ public class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui.html"
                 ).permitAll()
-                // Cho phép người chưa đăng nhập gọi API đăng ký tài khoản.
+                // Cho phép người chưa đăng nhập gọi API đăng ký và đăng nhập.
                 // Matcher không gồm context-path /api/v1 vì servlet container đã tách phần này.
-                .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
-                // Tất cả endpoint còn lại đều yêu cầu người dùng đã được xác thực.
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/auth/register",
+                    "/auth/login"
+                ).permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
+
+                .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
+
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/bookings"
+                ).authenticated()
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/bookings",
+                    "/bookings/*"
+                ).authenticated()
+                .requestMatchers(HttpMethod.PATCH, "/bookings/*/cancel").authenticated()
+                .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
+                .requestMatchers(HttpMethod.POST, "/admin/tours").hasRole("ADMIN")
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/admin/tours/*"
+                ).hasRole("ADMIN")
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/admin/tours/*"
+                ).hasRole("ADMIN")
+
+                // Mọi endpoint chưa được liệt kê ở trên đều yêu cầu xác thực.
                 .anyRequest().authenticated()
             )
-            .build();
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
+            );
+
+        return http.build();
     }
 }
