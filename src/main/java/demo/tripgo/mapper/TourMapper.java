@@ -2,9 +2,11 @@ package demo.tripgo.mapper;
 
 import demo.tripgo.dto.response.DestinationResponse;
 import demo.tripgo.dto.response.ItineraryDayResponse;
+import demo.tripgo.dto.response.TourAvailabilityResponse;
 import demo.tripgo.dto.response.TourDetailResponse;
 import demo.tripgo.dto.response.TourImageResponse;
 import demo.tripgo.dto.response.TourSummaryResponse;
+import demo.tripgo.entity.Departure;
 import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Tour;
 import org.springframework.stereotype.Component;
@@ -56,6 +58,14 @@ public class TourMapper {
             List.copyOf(tour.getExcluded()),
             images,
             itinerary
+        );
+    }
+
+    public TourAvailabilityResponse toAvailability(Departure departure) {
+        return new TourAvailabilityResponse(
+            departure.getDepartureDate(),
+            departure.getTotalSeats(),
+            departure.getRemainingSeats()
         );
     }
 

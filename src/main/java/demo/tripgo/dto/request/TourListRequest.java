@@ -19,20 +19,15 @@ public record TourListRequest(
     Integer page,
 
     @Min(value = 1, message = "limit must be >= 1")
-    @Max(value = MAX_LIMIT, message = "limit must be <= " + MAX_LIMIT)
+    @Max(value = PageQuery.MAX_LIMIT, message = "limit must be <= " + PageQuery.MAX_LIMIT)
     Integer limit
 ) {
-    public static final int MAX_LIMIT = 50;
-
-    private static final int DEFAULT_PAGE = 1;
-    private static final int DEFAULT_LIMIT = 10;
-
-    // Không truyền thì dùng mặc định; giá trị sai đã bị @Min/@Max chặn (→ 400) trước khi tới đây.
+    // Tái dùng logic phân trang chung; không truyền thì dùng mặc định (giá trị sai đã bị @Min/@Max chặn).
     public int pageOrDefault() {
-        return page == null ? DEFAULT_PAGE : page;
+        return PageQuery.pageOrDefault(page);
     }
 
     public int limitOrDefault() {
-        return limit == null ? DEFAULT_LIMIT : limit;
+        return PageQuery.limitOrDefault(limit);
     }
 }
