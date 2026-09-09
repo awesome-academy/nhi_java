@@ -1,8 +1,10 @@
 package demo.tripgo.controller;
 
 import demo.tripgo.repository.UserRepository;
+import demo.tripgo.entity.Role;
 import demo.tripgo.entity.User;
 import demo.tripgo.entity.UserStatus;
+import demo.tripgo.security.JwtService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -12,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +23,7 @@ import java.util.stream.Stream;
 
 import static org.mockito.Mockito.doReturn;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,6 +42,56 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
+    private User saveUser(String email) {
+        User user = new User();
+        user.setFullName("Me Test");
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode("password123"));
+        user.setRole(Role.USER);
+        return userRepository.save(user);
+    }
+
+    @Test
+    void meReturnsCurrentUserWithoutPassword() throws Exception {
+        User user = saveUser("me-success@example.com");
+        String token = jwtService.generateToken(user);
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                .contextPath("/api/v1").servletPath("/auth/me")
+                .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(user.getId()))
+            .andExpect(jsonPath("$.email").value("me-success@example.com"))
+            .andExpect(jsonPath("$.role").value("USER"))
+            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.password").doesNotHaveJsonPath());
+    }
+
+    @Test
+    void meWithoutTokenReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/me")
+                .contextPath("/api/v1").servletPath("/auth/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void meWithNonUserPrincipalReturns401NotNpe() throws Exception {
+        // Principal của @WithMockUser là UserDetails, không phải entity User, nên
+        // @AuthenticationPrincipal User bind về null. Controller phải trả 401 ErrorResponse
+        // thay vì để NullPointerException lọt ra format lỗi mặc định của Spring Boot.
+        mockMvc.perform(get("/api/v1/auth/me")
+                .contextPath("/api/v1").servletPath("/auth/me"))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.message").isNotEmpty());
+    }
 
     @Test
     void loginReturnsTokenAndUserWithoutPassword() throws Exception {
