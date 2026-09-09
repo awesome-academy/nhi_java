@@ -15,6 +15,9 @@ import java.util.Locale;
 // nên toàn bộ việc lọc chạy ở DB (không tải hết rồi lọc trong bộ nhớ).
 public final class TourSpecifications {
 
+    // Ký tự escape dùng cho các pattern LIKE khi search theo từ khoá.
+    private static final char LIKE_ESCAPE_CHAR = '\\';
+
     private TourSpecifications() {
     }
 
@@ -31,10 +34,12 @@ public final class TourSpecifications {
             List<Predicate> predicates = new ArrayList<>();
 
             if (hasText(filter.q())) {
-                String pattern = "%" + filter.q().trim().toLowerCase(Locale.ROOT) + "%";
+                // Escape \, %, _ để chúng được hiểu là ký tự literal, không phải wildcard của LIKE.
+                String escaped = escapeLike(filter.q().trim().toLowerCase(Locale.ROOT));
+                String pattern = "%" + escaped + "%";
                 predicates.add(cb.or(
-                    cb.like(cb.lower(root.get("title")), pattern),
-                    cb.like(cb.lower(root.get("description")), pattern)
+                    cb.like(cb.lower(root.get("title")), pattern, LIKE_ESCAPE_CHAR),
+                    cb.like(cb.lower(root.get("description")), pattern, LIKE_ESCAPE_CHAR)
                 ));
             }
             if (hasText(filter.destination())) {
@@ -62,5 +67,13 @@ public final class TourSpecifications {
 
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    // Escape ký tự đặc biệt của LIKE. Phải xử lý '\' trước để không escape lại chính escape char.
+    private static String escapeLike(String value) {
+        return value
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_");
     }
 }

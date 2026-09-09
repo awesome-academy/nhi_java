@@ -130,6 +130,28 @@ class TourControllerIntegrationTest {
     }
 
     @Test
+    void keywordTreatsUnderscoreAndPercentAsLiteralNotWildcard() throws Exception {
+        saveTour("A_B Special Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("AXB Unrelated Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("50% Off Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("50 nights Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+
+        // "_" phải là ký tự literal: chỉ khớp "A_B ...", không khớp "AXB ...".
+        mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+                .param("q", "A_B"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.data[0].title").value("A_B Special Tour"));
+
+        // "%" cũng phải literal: chỉ khớp "50% Off ...", không khớp "50 nights ...".
+        mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+                .param("q", "50%"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.data[0].title").value("50% Off Tour"));
+    }
+
+    @Test
     void emptyResultReturnsEmptyDataAndZeroTotal() throws Exception {
         saveTour("only-tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
 
@@ -233,5 +255,28 @@ class TourControllerIntegrationTest {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.status").value(404))
             .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    void pathVariableTypeMismatchReturnsCleanMessage() throws Exception {
+        mvc.perform(get("/api/v1/tours/not-a-number")
+                .contextPath("/api/v1").servletPath("/tours/not-a-number"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.message").value("Parameter 'id' must be of type Long"))
+            // Không được lộ message nội bộ của Spring.
+            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(
+                org.hamcrest.Matchers.containsString("Failed to convert"))));
+    }
+
+    @Test
+    void queryParamTypeMismatchReturnsCleanFieldMessage() throws Exception {
+        mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+                .param("minPrice", "abc"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.errors.minPrice").value("must be of type BigDecimal"))
+            .andExpect(jsonPath("$.errors.minPrice", org.hamcrest.Matchers.not(
+                org.hamcrest.Matchers.containsString("Failed to convert"))));
     }
 }

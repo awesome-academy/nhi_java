@@ -2,9 +2,11 @@ package demo.tripgo.exception;
 
 import demo.tripgo.dto.response.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,7 +45,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
         exception.getBindingResult().getFieldErrors()
-            .forEach(error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+            .forEach(error -> errors.putIfAbsent(error.getField(), fieldErrorMessage(error)));
 
         ErrorResponse response = new ErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
@@ -52,6 +54,27 @@ public class GlobalExceptionHandler {
             LocalDateTime.now()
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    // Với lỗi ép kiểu khi bind (vd minPrice=abc) thì defaultMessage là message nội bộ của Spring;
+    // thay bằng thông báo gọn "must be of type X" cho client. Lỗi bean-validation giữ nguyên message tự viết.
+    private String fieldErrorMessage(FieldError error) {
+        if ("typeMismatch".equals(error.getCode())) {
+            return "must be of type " + requiredTypeName(error);
+        }
+        return error.getDefaultMessage();
+    }
+
+    private String requiredTypeName(FieldError error) {
+        try {
+            TypeMismatchException cause = error.unwrap(TypeMismatchException.class);
+            if (cause.getRequiredType() != null) {
+                return cause.getRequiredType().getSimpleName();
+            }
+        } catch (RuntimeException ignored) {
+            // Không lấy được kiểu yêu cầu thì dùng mô tả chung bên dưới.
+        }
+        return "the expected type";
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
@@ -95,12 +118,27 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-    // Giá trị tham số truy vấn không hợp lệ (sort/category lạ) hoặc sai kiểu (số không parse được) → 400.
-    @ExceptionHandler({InvalidRequestParameterException.class, MethodArgumentTypeMismatchException.class})
-    public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
+    // Giá trị tham số truy vấn không hợp lệ (sort/category lạ) → 400 với message tự viết.
+    @ExceptionHandler(InvalidRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRequestParameter(InvalidRequestParameterException exception) {
         ErrorResponse response = new ErrorResponse(
             HttpStatus.BAD_REQUEST.value(),
             exception.getMessage(),
+            Map.of(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    // Sai kiểu tham số (vd path variable id không phải số) → 400 với message gọn, không lộ chi tiết Spring/Java.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+        String type = exception.getRequiredType() != null
+            ? exception.getRequiredType().getSimpleName()
+            : "the expected type";
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            "Parameter '" + exception.getName() + "' must be of type " + type,
             Map.of(),
             LocalDateTime.now()
         );

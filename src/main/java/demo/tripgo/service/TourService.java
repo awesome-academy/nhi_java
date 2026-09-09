@@ -54,11 +54,14 @@ public class TourService {
     }
 
     public TourDetailResponse getTourDetail(Long id) {
-        // Nạp điểm đến + ảnh trong một truy vấn; không thấy thì trả 404 thống nhất.
+        // Truy vấn 1: nạp điểm đến + ảnh; không thấy thì trả 404 thống nhất.
         Tour tour = tourRepository.findDetailById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Tour", id));
-        // Khởi tạo tiếp lịch trình cho cùng entity đang quản lý (tránh join nhiều bag một lúc).
-        tourRepository.fetchItinerary(id);
+        // Truy vấn 2: nạp tiếp lịch trình (tách để tránh join nhiều bag một lúc) rồi gán lại kết quả.
+        // fetchItinerary trả về đúng entity managed đã có ảnh ở trên; gán tường minh thay vì dựa vào
+        // side-effect ngầm của persistence context, để logic không vỡ âm thầm nếu sau này đổi transaction.
+        tour = tourRepository.fetchItinerary(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Tour", id));
         return tourMapper.toDetail(tour);
     }
 
