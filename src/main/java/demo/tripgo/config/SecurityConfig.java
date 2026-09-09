@@ -85,6 +85,9 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
 
+                // Danh sách và chi tiết tour cho phép khách chưa đăng nhập xem.
+                .requestMatchers(HttpMethod.GET, "/tours", "/tours/*").permitAll()
+
                 .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
 
                 .requestMatchers(
