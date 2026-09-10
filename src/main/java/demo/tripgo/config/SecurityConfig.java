@@ -85,8 +85,9 @@ public class SecurityConfig {
 
                 .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
 
-                // Danh sách và chi tiết tour cho phép khách chưa đăng nhập xem.
-                .requestMatchers(HttpMethod.GET, "/tours", "/tours/*").permitAll()
+                // Danh sách, chi tiết, ngày khởi hành và đánh giá của tour cho khách xem không cần đăng nhập.
+                .requestMatchers(HttpMethod.GET,
+                    "/tours", "/tours/*", "/tours/*/availability", "/tours/*/reviews").permitAll()
 
                 .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
 
