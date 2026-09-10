@@ -89,6 +89,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                     "/tours", "/tours/*", "/tours/*/availability", "/tours/*/reviews").permitAll()
 
+                // Danh sách điểm đến (cho dropdown lọc).
+                .requestMatchers(HttpMethod.GET, "/destinations").permitAll()
+
                 .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
 
                 .requestMatchers(
