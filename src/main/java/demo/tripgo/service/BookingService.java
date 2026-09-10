@@ -18,6 +18,9 @@ import demo.tripgo.mapper.BookingMapper;
 import demo.tripgo.repository.BookingRepository;
 import demo.tripgo.repository.DepartureRepository;
 import demo.tripgo.repository.TourRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +35,9 @@ public class BookingService {
     private final TourRepository tourRepository;
     private final DepartureRepository departureRepository;
     private final BookingMapper bookingMapper;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BookingService(
         BookingRepository bookingRepository,
@@ -102,8 +108,11 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        // Hoàn lại số chỗ đã giữ cho hàng khởi hành.
+        // Hoàn lại số chỗ đã giữ. Departure đã được nạp sẵn (qua @EntityGraph) nên phải refresh KÈM
+        // khoá bi quan để đọc lại giá trị mới nhất dưới lock — tránh lost update khi 2 request huỷ
+        // cùng departure đồng thời (query có @Lock nhưng entity đang cache sẽ trả giá trị cũ).
         Departure departure = booking.getDeparture();
+        entityManager.refresh(departure, LockModeType.PESSIMISTIC_WRITE);
         departure.setBookedSeats(departure.getBookedSeats() - (booking.getAdults() + booking.getChildren()));
         return bookingMapper.toCancelResponse(booking);
     }

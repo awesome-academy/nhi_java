@@ -45,16 +45,16 @@ public class BookingController {
 
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponse> getMyBooking(
-        @AuthenticationPrincipal User user,
-        @PathVariable Long id
+        @PathVariable Long id,
+        @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(bookingService.getMyBooking(AuthUtils.requireUser(user), id));
     }
 
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<BookingActionResponse> cancelBooking(
-        @AuthenticationPrincipal User user,
-        @PathVariable Long id
+        @PathVariable Long id,
+        @AuthenticationPrincipal User user
     ) {
         return ResponseEntity.ok(bookingService.cancelBooking(AuthUtils.requireUser(user), id));
     }
