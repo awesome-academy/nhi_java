@@ -188,14 +188,14 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void missingOrBlankLoginPasswordReturns400() throws Exception {
+    void missingOrBlankLoginPasswordReturns422() throws Exception {
         for (String body : new String[]{
                 "{\"email\":\"login@example.com\"}",
                 "{\"email\":\"login@example.com\",\"password\":\" \"}"}) {
             mockMvc.perform(post("/api/v1/auth/login")
                     .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors.password").value("Password is required"));
         }
     }
@@ -269,7 +269,7 @@ class AuthControllerIntegrationTest {
             .content("""
                 {"fullName":"Nguyen Van An","email":"oversized@example.com","password":"%s"}
                 """.formatted(password)))
-            .andExpect(status().isBadRequest())
+            .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.errors.password").value("Password must not exceed 72 UTF-8 bytes"));
     }
 
@@ -299,8 +299,8 @@ class AuthControllerIntegrationTest {
             .content("""
                 {"fullName":" ","email":"invalid-email","password":"1234567"}
                 """))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.status").value(422))
             .andExpect(jsonPath("$.message").value("Validation failed"))
             .andExpect(jsonPath("$.errors.fullName").value("Full name is required"))
             .andExpect(jsonPath("$.errors.email").value("Email is invalid"))

@@ -52,6 +52,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
+    // Lỗi bean-validation (@Valid) → 422 Unprocessable Entity: body/tham số đúng cú pháp nhưng sai luật.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -59,12 +60,12 @@ public class GlobalExceptionHandler {
             .forEach(error -> errors.putIfAbsent(error.getField(), fieldErrorMessage(error)));
 
         ErrorResponse response = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.UNPROCESSABLE_ENTITY.value(),
             "Validation failed",
             errors,
             LocalDateTime.now()
         );
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.unprocessableEntity().body(response);
     }
 
     // Với lỗi ép kiểu khi bind (vd minPrice=abc) thì defaultMessage là message nội bộ của Spring;
@@ -110,7 +111,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
-    // Vi phạm ràng buộc trên query param (vd page<1, limit vượt trần) → 400.
+    // Vi phạm ràng buộc trên query param (bean-validation cấp tham số) → 422 như các lỗi validate khác.
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -121,12 +122,36 @@ public class GlobalExceptionHandler {
             errors.putIfAbsent(param, violation.getMessage());
         });
         ErrorResponse response = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
+            HttpStatus.UNPROCESSABLE_ENTITY.value(),
             "Validation failed",
             errors,
             LocalDateTime.now()
         );
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity.unprocessableEntity().body(response);
+    }
+
+    // Đơn không hợp lệ về nghiệp vụ (vd ngày không có chuyến) → 422.
+    @ExceptionHandler(InvalidBookingRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidBookingRequest(InvalidBookingRequestException exception) {
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.UNPROCESSABLE_ENTITY.value(),
+            exception.getMessage(),
+            Map.of(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.unprocessableEntity().body(response);
+    }
+
+    // Hết chỗ hoặc huỷ đơn đã huỷ → 409 Conflict.
+    @ExceptionHandler({SoldOutException.class, BookingAlreadyCancelledException.class})
+    public ResponseEntity<ErrorResponse> handleBookingConflict(RuntimeException exception) {
+        ErrorResponse response = new ErrorResponse(
+            HttpStatus.CONFLICT.value(),
+            exception.getMessage(),
+            Map.of(),
+            LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     // Giá trị tham số truy vấn không hợp lệ (sort/category lạ) → 400 với message tự viết.

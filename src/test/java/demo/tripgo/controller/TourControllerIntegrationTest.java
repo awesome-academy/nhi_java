@@ -164,17 +164,17 @@ class TourControllerIntegrationTest {
     }
 
     @Test
-    void invalidPaginationParamsReturn400() throws Exception {
+    void invalidPaginationParamsReturn422() throws Exception {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("page", "0"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.status").value(422))
             .andExpect(jsonPath("$.errors.page").isNotEmpty());
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("limit", "100"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.status").value(422))
             .andExpect(jsonPath("$.errors.limit").isNotEmpty());
     }
 
@@ -273,8 +273,8 @@ class TourControllerIntegrationTest {
     void queryParamTypeMismatchReturnsCleanFieldMessage() throws Exception {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("minPrice", "abc"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.status").value(422))
             .andExpect(jsonPath("$.errors.minPrice").value("must be of type BigDecimal"))
             .andExpect(jsonPath("$.errors.minPrice", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
