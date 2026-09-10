@@ -234,13 +234,13 @@ class TourReviewAvailabilityIntegrationTest {
     }
 
     @Test
-    void createReviewWithInvalidRatingReturns400() throws Exception {
+    void createReviewWithInvalidRatingReturns422() throws Exception {
         for (int rating : new int[]{0, 6}) {
             mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
                     .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                     .header("Authorization", tokenFor(saveUser()))
                     .contentType(MediaType.APPLICATION_JSON).content(reviewBody(rating, "x")))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.errors.rating").isNotEmpty());
         }
     }
