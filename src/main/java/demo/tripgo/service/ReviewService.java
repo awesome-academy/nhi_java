@@ -5,11 +5,14 @@ import demo.tripgo.dto.response.CreateReviewResponse;
 import demo.tripgo.dto.response.ReviewPageResponse;
 import demo.tripgo.dto.response.ReviewResponse;
 import demo.tripgo.entity.Review;
+import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.entity.Tour;
 import demo.tripgo.entity.User;
 import demo.tripgo.exception.ResourceNotFoundException;
+import demo.tripgo.exception.ReviewNotAllowedException;
 import demo.tripgo.exception.ReviewAlreadyExistsException;
 import demo.tripgo.mapper.ReviewMapper;
+import demo.tripgo.repository.BookingRepository;
 import demo.tripgo.repository.ReviewRepository;
 import demo.tripgo.repository.TourRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,22 +29,25 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final TourRepository tourRepository;
+    private final BookingRepository bookingRepository;
     private final ReviewMapper reviewMapper;
 
     public ReviewService(
         ReviewRepository reviewRepository,
         TourRepository tourRepository,
+        BookingRepository bookingRepository,
         ReviewMapper reviewMapper
     ) {
         this.reviewRepository = reviewRepository;
         this.tourRepository = tourRepository;
+        this.bookingRepository = bookingRepository;
         this.reviewMapper = reviewMapper;
     }
 
     // Đánh giá phân trang (mới nhất trước) + điểm trung bình của tour (lấy từ rating_avg đã denormalized).
     public ReviewPageResponse getReviews(Long tourId, int page, int limit) {
         Tour tour = tourRepository.findById(tourId)
-            .orElseThrow(() -> new ResourceNotFoundException("Tour", tourId));
+            .orElseThrow(() -> new ResourceNotFoundException("tour"));
         Pageable pageable = PageRequest.of(
             page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
         Page<ReviewResponse> reviews = reviewRepository.findByTourId(tourId, pageable)
@@ -52,7 +58,13 @@ public class ReviewService {
     @Transactional
     public CreateReviewResponse createReview(Long tourId, User user, CreateReviewRequest request) {
         Tour tour = tourRepository.findById(tourId)
-            .orElseThrow(() -> new ResourceNotFoundException("Tour", tourId));
+            .orElseThrow(() -> new ResourceNotFoundException("tour"));
+        // Theo user story F8 ("là người dùng ĐÃ ĐẶT TOUR"): chỉ ai từng đặt tour này mới được đánh giá.
+        // Đơn đã huỷ không tính -> chặn việc đặt rồi huỷ ngay chỉ để lấy quyền đánh giá.
+        if (!bookingRepository.existsByUserIdAndTourIdAndStatusNot(
+                user.getId(), tourId, BookingStatus.CANCELLED)) {
+            throw new ReviewNotAllowedException();
+        }
         // Mỗi user chỉ đánh giá một tour một lần (kiểm tra trước, giống register kiểm tra email trùng).
         if (reviewRepository.existsByTourIdAndUserId(tourId, user.getId())) {
             throw new ReviewAlreadyExistsException(tourId);

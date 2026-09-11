@@ -22,7 +22,8 @@ public class DestinationService {
         this.destinationMapper = destinationMapper;
     }
 
-    // Danh sách điểm đến kèm số tour, sắp theo tên; bọc object envelope { data: [...] }.
+    // Danh sách điểm đến kèm số tour, sắp theo tên; bọc object envelope { data: [...] }
+    // theo quy ước ở REQUIREMENTS.md mục 3 (không trả JSON array trần).
     public ListResponse<DestinationSummaryResponse> listDestinations() {
         return ListResponse.of(
             destinationRepository.findAllWithTourCount().stream()

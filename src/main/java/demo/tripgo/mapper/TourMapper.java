@@ -11,6 +11,7 @@ import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Tour;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 
@@ -21,8 +22,9 @@ public class TourMapper {
     public TourSummaryResponse toSummary(Tour tour) {
         return new TourSummaryResponse(
             tour.getId(),
+            tour.getSlug(),
             tour.getTitle(),
-            toDestination(tour.getDestination()),
+            tour.getDestination().getName(),
             category(tour),
             tour.getDurationDays(),
             tour.getPrice(),
@@ -34,7 +36,7 @@ public class TourMapper {
     }
 
     // Dữ liệu đầy đủ cho màn chi tiết. Các collection phải đã được nạp trong transaction gọi.
-    public TourDetailResponse toDetail(Tour tour) {
+    public TourDetailResponse toDetail(Tour tour, List<TourAvailabilityResponse> startDates) {
         List<TourImageResponse> images = tour.getImages().stream()
             .map(image -> new TourImageResponse(image.getUrl(), image.getPosition()))
             .toList();
@@ -59,21 +61,23 @@ public class TourMapper {
             List.copyOf(tour.getIncluded()),
             List.copyOf(tour.getExcluded()),
             images,
-            itinerary
+            itinerary,
+            startDates
         );
     }
 
-    public TourAvailabilityResponse toAvailability(Departure departure) {
+    // price truyền từ ngoài vào (giá hiệu lực của tour) để không phải nạp lazy Tour cho từng ngày.
+    public TourAvailabilityResponse toAvailability(Departure departure, BigDecimal price) {
         return new TourAvailabilityResponse(
             departure.getDepartureDate(),
-            departure.getTotalSeats(),
-            departure.getRemainingSeats()
+            departure.getRemainingSeats(),
+            price
         );
     }
 
-    // Category xuất dạng chữ thường theo hợp đồng (beach|mountain|city|trekking|cruise|cultural).
+    // Category xuất dạng slug chữ thường theo hợp đồng (beach|mountain|city|trekking|cruise|cultural).
     private String category(Tour tour) {
-        return tour.getCategory().name().toLowerCase(Locale.ROOT);
+        return tour.getCategory().getSlug();
     }
 
     private DestinationResponse toDestination(Destination destination) {

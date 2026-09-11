@@ -1,15 +1,11 @@
 package demo.tripgo.dto.response;
 
-import demo.tripgo.entity.Role;
-
-import java.time.LocalDateTime;
-
+// Thông tin user trả ra client theo hợp đồng 6.2: { id, name, email, role }.
+// role xuất dạng chữ thường ("user"/"admin") giống cách category/status của tour.
 public record UserResponse(
     Long id,
-    String fullName,
+    String name,
     String email,
-    Role role,
-    String status,
-    LocalDateTime createdAt
+    String role
 ) {
 }

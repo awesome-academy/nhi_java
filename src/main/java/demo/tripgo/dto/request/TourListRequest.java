@@ -15,19 +15,19 @@ public record TourListRequest(
     Double rating,
     String sort,
 
-    @Min(value = 1, message = "page must be >= 1")
+    @Min(value = 1, message = "page phải lớn hơn hoặc bằng 1")
     Integer page,
 
-    @Min(value = 1, message = "size must be >= 1")
-    @Max(value = PageQuery.MAX_SIZE, message = "size must be <= " + PageQuery.MAX_SIZE)
-    Integer size
+    @Min(value = 1, message = "limit phải lớn hơn hoặc bằng 1")
+    @Max(value = PageQuery.MAX_LIMIT, message = "limit không được vượt quá " + PageQuery.MAX_LIMIT)
+    Integer limit
 ) {
     // Tái dùng logic phân trang chung; không truyền thì dùng mặc định (giá trị sai đã bị @Min/@Max chặn).
     public int pageOrDefault() {
         return PageQuery.pageOrDefault(page);
     }
 
-    public int sizeOrDefault() {
-        return PageQuery.sizeOrDefault(size);
+    public int limitOrDefault() {
+        return PageQuery.limitOrDefault(limit);
     }
 }

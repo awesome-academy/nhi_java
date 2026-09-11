@@ -41,7 +41,7 @@ public class Booking {
     private int children;
 
     // Server tự tính, không tin tổng tiền client gửi.
-    @Column(name = "total_price", nullable = false, precision = 12, scale = 2)
+    @Column(name = "total_price", nullable = false, precision = 12, scale = 0)
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)

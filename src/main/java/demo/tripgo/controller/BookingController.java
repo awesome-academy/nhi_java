@@ -49,7 +49,7 @@ public class BookingController {
         @Valid PageQuery request
     ) {
         return ResponseEntity.ok(bookingService.getMyBookings(
-            AuthUtils.requireUser(user), request.pageOrDefault(), request.sizeOrDefault()));
+            AuthUtils.requireUser(user), request.pageOrDefault(), request.limitOrDefault()));
     }
 
     @GetMapping("/{id}")

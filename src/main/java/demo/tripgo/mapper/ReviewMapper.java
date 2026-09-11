@@ -11,15 +11,15 @@ public class ReviewMapper {
     public ReviewResponse toResponse(Review review) {
         return new ReviewResponse(
             review.getId(),
-            review.getUser().getFullName(),
+            new ReviewResponse.Reviewer(review.getUser().getFullName()),
             review.getRating(),
             review.getComment(),
-            review.getCreatedAt()
+            review.getCreatedAt().toLocalDate()
         );
     }
 
     // Bọc kèm message giống UserMapper.toRegisterResponse.
     public CreateReviewResponse toCreateResponse(Review review) {
-        return new CreateReviewResponse("Review created successfully", toResponse(review));
+        return new CreateReviewResponse("Đánh giá thành công", toResponse(review));
     }
 }

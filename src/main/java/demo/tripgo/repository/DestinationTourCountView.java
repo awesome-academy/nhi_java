@@ -2,11 +2,11 @@ package demo.tripgo.repository;
 
 // Projection cho truy vấn đếm số tour theo điểm đến; Spring Data map theo tên alias.
 public interface DestinationTourCountView {
-    Long getId();
+    String getSlug();
 
     String getName();
 
-    String getSlug();
+    String getImage();
 
     long getTourCount();
 }

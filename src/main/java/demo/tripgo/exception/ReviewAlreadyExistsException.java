@@ -4,6 +4,6 @@ package demo.tripgo.exception;
 public class ReviewAlreadyExistsException extends RuntimeException {
 
     public ReviewAlreadyExistsException(Long tourId) {
-        super("You have already reviewed tour " + tourId);
+        super("Bạn đã đánh giá tour này rồi");
     }
 }

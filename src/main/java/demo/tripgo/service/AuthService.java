@@ -57,7 +57,8 @@ public class AuthService {
         // Mã hóa mật khẩu gốc bằng BCrypt trước khi đưa vào User entity.
         String encodedPassword = passwordEncoder.encode(request.password());
         User savedUser = userRepository.save(userMapper.toEntity(request, normalizedEmail, encodedPassword));
-        return userMapper.toRegisterResponse(savedUser);
+        // Cấp token ngay để client không phải gọi tiếp /auth/login sau khi đăng ký.
+        return userMapper.toRegisterResponse(savedUser, jwtService.generateToken(savedUser));
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -67,7 +68,7 @@ public class AuthService {
             .findByEmail(normalizedEmail)
             .orElseThrow(() ->
                 new InvalidCredentialsException(
-                    "Invalid email or password"
+                    "Email hoặc mật khẩu không đúng"
                 )
             );
 
@@ -76,13 +77,13 @@ public class AuthService {
                 user.getPassword()
         )) {
             throw new InvalidCredentialsException(
-                "Invalid email or password"
+                "Email hoặc mật khẩu không đúng"
             );
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new InvalidCredentialsException(
-                "User account is not active"
+                "Tài khoản không ở trạng thái hoạt động"
             );
         }
 
@@ -90,11 +91,6 @@ public class AuthService {
 
         UserResponse userResponse = userMapper.toUserResponse(user);
 
-        return new LoginResponse(
-            "Login successful",
-            token,
-            "Bearer",
-            userResponse
-        );
+        return new LoginResponse(token, userResponse);
     }
 }

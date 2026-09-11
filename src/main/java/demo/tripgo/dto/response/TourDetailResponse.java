@@ -21,6 +21,9 @@ public record TourDetailResponse(
     List<String> included,
     List<String> excluded,
     List<TourImageResponse> images,
-    List<ItineraryDayResponse> itinerary
+    List<ItineraryDayResponse> itinerary,
+    // Các ngày khởi hành sắp tới kèm số chỗ còn và giá — client dựng được form đặt tour
+    // ngay trên màn chi tiết, không phải gọi thêm /availability.
+    List<TourAvailabilityResponse> startDates
 ) {
 }

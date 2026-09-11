@@ -36,7 +36,7 @@ class RateLimitFilterTest {
         filter.doFilterInternal(request, response, chain); // 3 - chặn
 
         verify(chain, times(2)).doFilter(request, response);
-        verify(responder, times(1)).write(response, 429, "Too many requests, please try again later");
+        verify(responder, times(1)).write(response, 429, "Quá nhiều yêu cầu, vui lòng thử lại sau");
     }
 
     @Test

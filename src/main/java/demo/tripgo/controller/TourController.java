@@ -44,9 +44,10 @@ public class TourController {
         return ResponseEntity.ok(tourService.listTours(request));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TourDetailResponse> getTour(@PathVariable Long id) {
-        return ResponseEntity.ok(tourService.getTourDetail(id));
+    // Hợp đồng 6.3 định danh tour bằng slug; id dạng số vẫn dùng được (xem TourService).
+    @GetMapping("/{slug}")
+    public ResponseEntity<TourDetailResponse> getTour(@PathVariable String slug) {
+        return ResponseEntity.ok(tourService.getTourDetail(slug));
     }
 
     @GetMapping("/{id}/availability")
@@ -63,7 +64,7 @@ public class TourController {
         @Valid PageQuery request
     ) {
         return ResponseEntity.ok(
-            reviewService.getReviews(id, request.pageOrDefault(), request.sizeOrDefault()));
+            reviewService.getReviews(id, request.pageOrDefault(), request.limitOrDefault()));
     }
 
     @PostMapping("/{id}/reviews")

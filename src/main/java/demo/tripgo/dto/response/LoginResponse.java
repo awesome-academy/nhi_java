@@ -1,9 +1,7 @@
 package demo.tripgo.dto.response;
 
 public record LoginResponse(
-    String message,
-    String accessToken,
-    String tokenType,
+    String token,
     UserResponse user
 ) {
 }

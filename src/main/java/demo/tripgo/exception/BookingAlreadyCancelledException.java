@@ -4,6 +4,6 @@ package demo.tripgo.exception;
 public class BookingAlreadyCancelledException extends RuntimeException {
 
     public BookingAlreadyCancelledException(String code) {
-        super("Booking " + code + " is already cancelled");
+        super("Đơn " + code + " đã được huỷ trước đó");
     }
 }

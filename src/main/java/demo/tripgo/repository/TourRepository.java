@@ -19,6 +19,10 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
         """)
     Optional<Tour> findDetailById(@Param("id") Long id);
 
+    // Tra id từ slug để tái dùng hai truy vấn fetch bên dưới (chỉ lấy id nên rất nhẹ).
+    @Query("select t.id from Tour t where t.slug = :slug")
+    Optional<Long> findIdBySlug(@Param("slug") String slug);
+
     // Khởi tạo tiếp lịch trình theo ngày cho cùng entity đã nạp (tránh MultipleBagFetchException
     // khi join fetch nhiều collection List cùng lúc).
     @Query("""

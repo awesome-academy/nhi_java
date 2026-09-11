@@ -6,18 +6,18 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record RegisterRequest(
-    @NotBlank(message = "Full name is required")
-    @Size(max = 100, message = "Full name must not exceed 100 characters")
-    String fullName,
+    @NotBlank(message = "Họ tên không được để trống")
+    @Size(max = 100, message = "Họ tên không được vượt quá 100 ký tự")
+    String name,
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email is invalid")
-    @Size(max = 255, message = "Email must not exceed 255 characters")
+    @NotBlank(message = "Email không được để trống")
+    @Email(message = "Email không hợp lệ")
+    @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
     String email,
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, message = "Password must contain at least 8 characters")
-    @Utf8ByteLength(max = 72, message = "Password must not exceed 72 UTF-8 bytes")
+    @NotBlank(message = "Mật khẩu không được để trống")
+    @Size(min = 8, message = "Mật khẩu phải có ít nhất 8 ký tự")
+    @Utf8ByteLength(max = 72, message = "Mật khẩu quá dài, vui lòng chọn mật khẩu ngắn hơn")
     String password
 ) {
 }

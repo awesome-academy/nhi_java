@@ -58,18 +58,18 @@ public class BookingService {
     @Transactional
     public BookingResponse createBooking(User user, CreateBookingRequest request) {
         Tour tour = tourRepository.findById(request.tourId())
-            .orElseThrow(() -> new ResourceNotFoundException("Tour", request.tourId()));
+            .orElseThrow(() -> new ResourceNotFoundException("tour"));
 
         // Khoá hàng khởi hành để kiểm tra & trừ chỗ an toàn với request đồng thời.
         Departure departure = departureRepository
             .findByTourIdAndDepartureDate(tour.getId(), request.date())
             .orElseThrow(() -> new InvalidBookingRequestException(
-                "No departure available for tour " + tour.getId() + " on " + request.date()));
+                "Tour không có chuyến khởi hành vào ngày " + request.date()));
 
         int guests = request.adults() + request.children();
         if (departure.getRemainingSeats() < guests) {
-            throw new SoldOutException("Only " + departure.getRemainingSeats()
-                + " seat(s) left for " + request.date() + ", requested " + guests);
+            throw new SoldOutException("Chỉ còn " + departure.getRemainingSeats() + " chỗ cho ngày "
+                + request.date() + ", trong khi bạn đặt " + guests + " chỗ");
         }
         departure.setBookedSeats(departure.getBookedSeats() + guests);
 
@@ -91,8 +91,8 @@ public class BookingService {
     }
 
     // Đơn của tôi, phân trang, mới nhất trước.
-    public PageResponse<BookingSummaryResponse> getMyBookings(User user, int page, int size) {
-        Pageable pageable = PageRequest.of(page - 1, size,
+    public PageResponse<BookingSummaryResponse> getMyBookings(User user, int page, int limit) {
+        Pageable pageable = PageRequest.of(page - 1, limit,
             Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
         Page<Booking> result = bookingRepository.findByUserId(user.getId(), pageable);
         return PageResponse.of(result.map(bookingMapper::toSummary));
@@ -100,14 +100,14 @@ public class BookingService {
 
     public BookingResponse getMyBooking(User user, Long id) {
         Booking booking = bookingRepository.findByIdAndUserId(id, user.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+            .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
         return bookingMapper.toResponse(booking);
     }
 
     @Transactional
     public BookingResponse cancelBooking(User user, Long id) {
         Booking booking = bookingRepository.findByIdAndUserId(id, user.getId())
-            .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+            .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new BookingAlreadyCancelledException(booking.getCode());
         }

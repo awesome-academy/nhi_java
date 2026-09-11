@@ -18,7 +18,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({FIELD, METHOD, PARAMETER, ANNOTATION_TYPE})
 @Retention(RUNTIME)
 public @interface Utf8ByteLength {
-    String message() default "must not exceed {max} UTF-8 bytes";
+    String message() default "vượt quá độ dài cho phép";
 
     int max();
 
