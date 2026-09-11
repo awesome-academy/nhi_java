@@ -20,21 +20,22 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 | F4 | Ngày khởi hành & số chỗ còn trống (lọc theo tháng) |
 | F5 | Đặt tour, danh sách đơn của tôi, chi tiết đơn, huỷ đơn |
 | F6 | Đánh giá tour (xem danh sách công khai, tạo đánh giá khi đã đăng nhập) |
-| F7 | Danh sách điểm đến kèm số lượng tour |
+| F7 | Danh sách điểm đến (kèm số tour) và loại hình tour (kèm nhãn tiếng Việt) |
 
 ## 2. Danh sách API
 
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
-| POST | `/auth/register` | public | Đăng ký → 201 |
-| POST | `/auth/login` | public | Đăng nhập → `accessToken` |
+| POST | `/auth/register` | public | Đăng ký → 201, trả luôn `{ token, user }` |
+| POST | `/auth/login` | public | Đăng nhập → `{ token, user }` |
 | GET | `/auth/me` | user | Thông tin tài khoản hiện tại |
 | GET | `/tours` | public | Danh sách tour (filter/sort/paging) |
-| GET | `/tours/{id}` | public | Chi tiết tour |
+| GET | `/tours/{slug}` | public | Chi tiết tour (nhận cả id dạng số), kèm `startDates` |
 | GET | `/tours/{id}/availability` | public | Ngày khởi hành & chỗ trống |
 | GET | `/tours/{id}/reviews` | public | Đánh giá của tour (phân trang) |
-| POST | `/tours/{id}/reviews` | user | Tạo đánh giá → 201 |
-| GET | `/destinations` | public | Điểm đến + số tour |
+| POST | `/tours/{id}/reviews` | user **đã đặt tour** | Tạo đánh giá → 201 |
+| GET | `/destinations` | public | Điểm đến + ảnh + số tour |
+| GET | `/categories` | public | Loại hình tour + nhãn tiếng Việt |
 | POST | `/bookings` | user | Đặt tour → 201 |
 | GET | `/bookings` | user | Đơn của tôi (phân trang) |
 | GET | `/bookings/{id}` | user | Chi tiết đơn của tôi |
@@ -42,16 +43,19 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 
 **Tham số của `GET /tours`:** `q`, `destination` (slug), `category`
 (`beach|mountain|city|trekking|cruise|cultural`), `minPrice`, `maxPrice`, `duration`, `rating`,
-`sort` (`newest|price_asc|price_desc|rating_desc`, mặc định `newest`), `page` (từ 1), `size`
+`sort` (`newest|price_asc|price_desc|rating_desc`, mặc định `newest`), `page` (từ 1), `limit`
 (mặc định 10, tối đa 50).
 
-**Định dạng response.** Danh sách phân trang trả `{ data, total, page, size }`, danh sách thường
+**Định dạng response.** Danh sách phân trang trả `{ data, total, page, limit }`, danh sách thường
 trả `{ data: [...] }`, GET đơn lẻ trả object DTO. Mọi lỗi dùng chung một khuôn:
 
 ```json
-{ "error": { "code": "UNPROCESSABLE_ENTITY", "message": "Validation failed",
-             "fields": { "email": "Email is invalid" } } }
+{ "error": { "code": "VALIDATION", "message": "Dữ liệu không hợp lệ",
+             "fields": { "email": "Email không hợp lệ" } } }
 ```
+
+Message trả về bằng tiếng Việt. `code` dùng tên `HttpStatus`, trừ hai trường hợp hợp đồng chỉ
+định riêng: `INVALID_CREDENTIALS` (sai email/mật khẩu) và `VALIDATION` (lỗi bean-validation).
 
 `fields` chỉ xuất hiện ở lỗi bean-validation. Status dùng: 200/201 · 400 sai kiểu tham số ·
 401 chưa xác thực · 403 thiếu quyền · 404 không tồn tại **hoặc không sở hữu** · 409 xung đột
@@ -107,7 +111,7 @@ tour `id=1` có nhiều ngày khởi hành, tour `id=2` cố tình không có ng
 ## 6. Thử API
 
 Mở [`docs/api.http`](docs/api.http) trong IntelliJ IDEA (HTTP Client) hoặc VS Code
-(extension *REST Client*) rồi bấm **Send Request**. File phủ đủ 13 endpoint kèm các case lỗi
+(extension *REST Client*) rồi bấm **Send Request**. File phủ đủ 14 endpoint kèm các case lỗi
 (401/403/404/409/422/429); token được gán tự động sau request đăng nhập.
 
 Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
@@ -118,7 +122,7 @@ Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
 ./mvnw test
 ```
 
-82 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
+78 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
 đặt `JWT_SECRET`. Gồm integration test MockMvc cho auth, tour, review, availability, booking,
 destination và security config; cộng unit test rate limit và test race-condition khi huỷ đơn.
 
@@ -149,6 +153,10 @@ Destination 1─* Tour 1─* Departure          Tour 1─* TourImage
   và `entityManager.refresh(..., PESSIMISTIC_WRITE)` khi huỷ để tránh lost update.
 - **Rating denormalized** (`rating_avg`, `review_count` trên `Tour`) để lọc/sắp xếp theo đánh giá
   chạy được ở DB; cập nhật lại mỗi khi có review mới.
+- **Chỉ người đã đặt tour mới được đánh giá**: `POST /tours/{id}/reviews` kiểm tra user có
+  booking cho tour đó với trạng thái khác `CANCELLED`, nếu không trả **403**. Bám theo user story
+  F8 ("là người dùng đã đặt tour"), chặn tài khoản ảo spam điểm. Đơn đã huỷ không tính, để không
+  ai đặt rồi huỷ ngay chỉ nhằm lấy quyền đánh giá.
 - **Rate limit** `POST /auth/**` chống brute-force; lỗi 401/403/429 phát sinh trong filter cũng
   dùng chung khuôn `{error:{...}}` qua `SecurityErrorResponder`.
 

@@ -53,7 +53,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         if (!allow(clientKey(request))) {
             securityErrorResponder.write(response, 429,
-                "Too many requests, please try again later");
+                "Quá nhiều yêu cầu, vui lòng thử lại sau");
             return;
         }
         filterChain.doFilter(request, response);

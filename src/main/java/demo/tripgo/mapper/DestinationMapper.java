@@ -9,9 +9,9 @@ public class DestinationMapper {
 
     public DestinationSummaryResponse toSummary(DestinationTourCountView view) {
         return new DestinationSummaryResponse(
-            view.getId(),
-            view.getName(),
             view.getSlug(),
+            view.getName(),
+            view.getImage(),
             view.getTourCount()
         );
     }

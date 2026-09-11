@@ -88,14 +88,14 @@ public class SecurityConfig {
                     securityErrorResponder.write(
                         response,
                         401,
-                        "Authentication required: provide a valid Bearer token"
+                        "Vui lòng đăng nhập để tiếp tục"
                     )
                 )
                 .accessDeniedHandler((request, response, exception) ->
                     securityErrorResponder.write(
                         response,
                         403,
-                        "You do not have permission to access this resource"
+                        "Bạn không có quyền truy cập tài nguyên này"
                     )
                 )
             )
@@ -123,8 +123,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET,
                     "/tours", "/tours/*", "/tours/*/availability", "/tours/*/reviews").permitAll()
 
-                // Danh sách điểm đến (cho dropdown lọc).
-                .requestMatchers(HttpMethod.GET, "/destinations").permitAll()
+                // Danh sách điểm đến & loại hình tour (cho dropdown lọc).
+                .requestMatchers(HttpMethod.GET, "/destinations", "/categories").permitAll()
 
                 .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
 

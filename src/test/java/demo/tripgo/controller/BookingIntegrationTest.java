@@ -163,8 +163,8 @@ class BookingIntegrationTest {
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(bad))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
-            .andExpect(jsonPath("$.error.message").value("Validation failed"))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION"))
+            .andExpect(jsonPath("$.error.message").value("Dữ liệu không hợp lệ"))
             .andExpect(jsonPath("$.error.fields.tourId").isNotEmpty())
             .andExpect(jsonPath("$.error.fields.adults").isNotEmpty())
             .andExpect(jsonPath("$.error.fields.date").isNotEmpty());
@@ -183,7 +183,7 @@ class BookingIntegrationTest {
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(bad))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.fields['contact.phone']").value("Invalid phone number"));
+            .andExpect(jsonPath("$.error.fields['contact.phone']").value("Số điện thoại không hợp lệ"));
     }
 
     @Test
@@ -202,6 +202,8 @@ class BookingIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(tour.getId(), date.plusDays(1), 1, 0)))
             .andExpect(status().isUnprocessableEntity())
+            // 422 nghiệp vụ (ngày không có chuyến), không phải lỗi bean-validation nên không mang
+            // code VALIDATION và không có map "fields".
             .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"));
     }
 

@@ -25,8 +25,10 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-tripgo}
       DB_USERNAME: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      # Bắt buộc: `export JWT_SECRET=...` hoặc đặt trong file .env cạnh compose.
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      # Bắt buộc — đặt trong file .env cạnh compose (xem .env.example). Không dùng cú pháp
+      # ${VAR:?...} vì Compose nội suy file cho MỌI lệnh con, sẽ chặn cả `logs`/`ps`/`down`
+      # khi biến trống. Thiếu biến thì ứng dụng tự báo lỗi rõ ràng lúc khởi động.
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
       RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-20}

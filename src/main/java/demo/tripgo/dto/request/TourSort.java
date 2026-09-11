@@ -39,6 +39,6 @@ public enum TourSort {
         }
 
         throw new InvalidRequestParameterException(
-            "Invalid sort value: " + value + ". Allowed: newest, price_asc, price_desc, rating_desc");
+            "Giá trị sắp xếp không hợp lệ: " + value + ". Cho phép: newest, price_asc, price_desc, rating_desc");
     }
 }

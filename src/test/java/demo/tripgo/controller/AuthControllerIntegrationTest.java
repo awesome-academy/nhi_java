@@ -66,8 +66,7 @@ class AuthControllerIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(user.getId()))
             .andExpect(jsonPath("$.email").value("me-success@example.com"))
-            .andExpect(jsonPath("$.role").value("USER"))
-            .andExpect(jsonPath("$.status").value("ACTIVE"))
+            .andExpect(jsonPath("$.role").value("user"))
             .andExpect(jsonPath("$.password").doesNotHaveJsonPath());
     }
 
@@ -76,6 +75,8 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me")
                 .contextPath("/api/v1").servletPath("/auth/me"))
             .andExpect(status().isUnauthorized())
+            // Thiếu token bị chặn ở entry-point của Spring Security -> code là tên HttpStatus,
+            // khác với INVALID_CREDENTIALS (dành cho sai email/mật khẩu ở /auth/login).
             .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
             .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
@@ -89,7 +90,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me")
                 .contextPath("/api/v1").servletPath("/auth/me"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
             .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
 
@@ -104,8 +105,7 @@ class AuthControllerIntegrationTest {
                     {"email":"login-success@example.com","password":"password123"}
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.accessToken").isNotEmpty())
-            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.token").isNotEmpty())
             .andExpect(jsonPath("$.user.email").value("login-success@example.com"))
             .andExpect(jsonPath("$.user.password").doesNotHaveJsonPath());
     }
@@ -122,7 +122,7 @@ class AuthControllerIntegrationTest {
                         {"email":"%s","password":"password123"}
                         """.formatted(email)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.token").isNotEmpty())
                 .andExpect(jsonPath("$.user.email").value("login.mixed.case@example.com"))
                 .andExpect(jsonPath("$.user.password").doesNotHaveJsonPath());
         }
@@ -144,10 +144,10 @@ class AuthControllerIntegrationTest {
                     {"email":"%s","password":"password123"}
                     """.formatted(email)))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
-            .andExpect(jsonPath("$.error.message").value("User account is not active"))
+            .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
+            .andExpect(jsonPath("$.error.message").value("Tài khoản không ở trạng thái hoạt động"))
             .andExpect(jsonPath("$.error.fields").doesNotExist())
-            .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
+            .andExpect(jsonPath("$.token").doesNotHaveJsonPath());
     }
 
     private void registerLoginUser(String email) throws Exception {
@@ -155,7 +155,7 @@ class AuthControllerIntegrationTest {
                 .contextPath("/api/v1").servletPath("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                    {"fullName":"Login Test","email":"%s","password":"password123"}
+                    {"name":"Login Test","email":"%s","password":"password123"}
                     """.formatted(email)))
             .andExpect(status().isCreated());
     }
@@ -177,11 +177,11 @@ class AuthControllerIntegrationTest {
                         {"email":"short-login@example.com","password":"%s"}
                         """.formatted(password)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
-                .andExpect(jsonPath("$.error.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.error.message").value("Email hoặc mật khẩu không đúng"))
                 .andExpect(jsonPath("$.error.fields").doesNotExist())
                 .andExpect(jsonPath("$.error.fields").doesNotExist())
-                .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
+                .andExpect(jsonPath("$.token").doesNotHaveJsonPath());
         }
     }
 
@@ -194,14 +194,14 @@ class AuthControllerIntegrationTest {
                     .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.fields.password").value("Password is required"));
+                .andExpect(jsonPath("$.error.fields.password").value("Mật khẩu không được để trống"));
         }
     }
 
     @Test
     void normalizesEmailAndRejectsDuplicateWithDifferentCase() throws Exception {
         String request = """
-            {"fullName":"Nguyen Van An","email":"%s","password":"12345678"}
+            {"name":"Nguyen Van An","email":"%s","password":"12345678"}
             """;
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -223,13 +223,13 @@ class AuthControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(request.formatted("MIXED.CASE@EXAMPLE.COM")))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.error.message").value("Email already exists: mixed.case@example.com"));
+            .andExpect(jsonPath("$.error.message").value("Email đã được sử dụng: mixed.case@example.com"));
     }
 
     @Test
     void returnsConflictWhenDatabaseDetectsDuplicateAfterApplicationCheck() throws Exception {
         String request = """
-            {"fullName":"Nguyen Van An","email":"race@example.com","password":"12345678"}
+            {"name":"Nguyen Van An","email":"race@example.com","password":"12345678"}
             """;
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -249,7 +249,7 @@ class AuthControllerIntegrationTest {
             .content(request))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error.code").value("CONFLICT"))
-            .andExpect(jsonPath("$.error.message").value("Data conflicts with existing records or database constraints"))
+            .andExpect(jsonPath("$.error.message").value("Dữ liệu bị trùng với bản ghi đã tồn tại"))
             .andExpect(jsonPath("$.error.fields").doesNotExist());
     }
 
@@ -265,10 +265,10 @@ class AuthControllerIntegrationTest {
             .servletPath("/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"fullName":"Nguyen Van An","email":"oversized@example.com","password":"%s"}
+                {"name":"Nguyen Van An","email":"oversized@example.com","password":"%s"}
                 """.formatted(password)))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.fields.password").value("Password must not exceed 72 UTF-8 bytes"));
+            .andExpect(jsonPath("$.error.fields.password").value("Mật khẩu quá dài, vui lòng chọn mật khẩu ngắn hơn"));
     }
 
     static Stream<String> boundaryPasswords() {
@@ -283,7 +283,7 @@ class AuthControllerIntegrationTest {
             .servletPath("/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"fullName":"Nguyen Van An","email":"boundary-%s@example.com","password":"%s"}
+                {"name":"Nguyen Van An","email":"boundary-%s@example.com","password":"%s"}
                 """.formatted(password.length(), password)))
             .andExpect(status().isCreated());
     }
@@ -295,14 +295,14 @@ class AuthControllerIntegrationTest {
             .servletPath("/auth/register")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"fullName":" ","email":"invalid-email","password":"1234567"}
+                {"name":" ","email":"invalid-email","password":"1234567"}
                 """))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
-            .andExpect(jsonPath("$.error.message").value("Validation failed"))
-            .andExpect(jsonPath("$.error.fields.fullName").value("Full name is required"))
-            .andExpect(jsonPath("$.error.fields.email").value("Email is invalid"))
-            .andExpect(jsonPath("$.error.fields.password").value("Password must contain at least 8 characters"));
+            .andExpect(jsonPath("$.error.code").value("VALIDATION"))
+            .andExpect(jsonPath("$.error.message").value("Dữ liệu không hợp lệ"))
+            .andExpect(jsonPath("$.error.fields.name").value("Họ tên không được để trống"))
+            .andExpect(jsonPath("$.error.fields.email").value("Email không hợp lệ"))
+            .andExpect(jsonPath("$.error.fields.password").value("Mật khẩu phải có ít nhất 8 ký tự"));
 
         assertThat(userRepository.findByEmail("invalid-email")).isEmpty();
     }
@@ -315,7 +315,7 @@ class AuthControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "fullName": "Nguyen Van An",
+                  "name": "Nguyen Van An",
                   "email": "an.nguyen@example.com",
                   "password": "12345678"
                 }

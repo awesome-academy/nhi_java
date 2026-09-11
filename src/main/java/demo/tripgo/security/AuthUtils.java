@@ -13,7 +13,7 @@ public final class AuthUtils {
     // Chặn tại đây để trả 401 rõ ràng thay vì để NPE lọt ra ngoài.
     public static User requireUser(User user) {
         if (user == null) {
-            throw new InvalidCredentialsException("Authentication required");
+            throw new InvalidCredentialsException("Vui lòng đăng nhập để tiếp tục");
         }
         return user;
     }

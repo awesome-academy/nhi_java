@@ -36,7 +36,7 @@ public class AuthController {
         // AuthenticationPrincipalArgumentResolver trả null (không ném lỗi) nếu principal thực tế
         // không phải kiểu User — chặn tại đây để trả 401 rõ ràng thay vì để NPE lọt ra ngoài.
         if (user == null) {
-            throw new InvalidCredentialsException("Authentication required");
+            throw new InvalidCredentialsException("Vui lòng đăng nhập để tiếp tục");
         }
         return ResponseEntity.ok(userMapper.toUserResponse(user));
     }

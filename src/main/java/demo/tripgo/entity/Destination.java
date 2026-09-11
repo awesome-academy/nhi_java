@@ -22,4 +22,9 @@ public class Destination {
     @Column(nullable = false, unique = true, length = 150)
     @Setter
     private String slug;
+
+    // Ảnh đại diện điểm đến (hợp đồng 6.4); cho phép null vì không bắt buộc có ảnh.
+    @Column(length = 500)
+    @Setter
+    private String image;
 }

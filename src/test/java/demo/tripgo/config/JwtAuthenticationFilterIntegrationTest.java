@@ -73,7 +73,7 @@ class JwtAuthenticationFilterIntegrationTest {
                     {"email":"%s","password":"password123"}
                     """.formatted(user.getEmail())))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.message").value("User account is not active"));
+            .andExpect(jsonPath("$.error.message").value("Tài khoản không ở trạng thái hoạt động"));
     }
 
     @ParameterizedTest
@@ -118,7 +118,7 @@ class JwtAuthenticationFilterIntegrationTest {
                     {"email":"%s","password":"password123"}
                     """.formatted(user.getEmail())))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.accessToken").isNotEmpty());
+            .andExpect(jsonPath("$.token").isNotEmpty());
 
         mvc.perform(get("/api/v1/test/unlisted")
                 .contextPath("/api/v1").servletPath("/test/unlisted")

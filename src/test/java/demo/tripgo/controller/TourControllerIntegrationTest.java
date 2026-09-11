@@ -76,20 +76,20 @@ class TourControllerIntegrationTest {
         // Trang 1, limit 2, sort giá tăng -> [DN-cheap, DN-mid].
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("destination", "da-nang").param("sort", "price_asc")
-                .param("page", "1").param("size", "2"))
+                .param("page", "1").param("limit", "2"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
             .andExpect(jsonPath("$.page").value(1))
-            .andExpect(jsonPath("$.size").value(2))
+            .andExpect(jsonPath("$.limit").value(2))
             .andExpect(jsonPath("$.data.length()").value(2))
             .andExpect(jsonPath("$.data[0].title").value("DN-cheap"))
             .andExpect(jsonPath("$.data[1].title").value("DN-mid"))
-            .andExpect(jsonPath("$.data[0].destination.slug").value("da-nang"));
+            .andExpect(jsonPath("$.data[0].destination").value("Da Nang"));
 
         // Trang 2 -> [DN-expensive], không lẫn tour Ha Noi.
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("destination", "da-nang").param("sort", "price_asc")
-                .param("page", "2").param("size", "2"))
+                .param("page", "2").param("limit", "2"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
             .andExpect(jsonPath("$.page").value(2))
@@ -168,14 +168,14 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("page", "0"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION"))
             .andExpect(jsonPath("$.error.fields.page").isNotEmpty());
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
-                .param("size", "100"))
+                .param("limit", "100"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
-            .andExpect(jsonPath("$.error.fields.size").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("VALIDATION"))
+            .andExpect(jsonPath("$.error.fields.limit").isNotEmpty());
     }
 
     @Test
@@ -258,12 +258,44 @@ class TourControllerIntegrationTest {
     }
 
     @Test
-    void pathVariableTypeMismatchReturnsCleanMessage() throws Exception {
+    void detailBySlugReturnsSameTourAsById() throws Exception {
+        Tour tour = saveTour("Slug Tour", daNang, TourCategory.BEACH, 3, "1000000", 4.0);
+        tour.setSlug("slug-tour-abc");
+        Long id = tours.save(tour).getId();
+
+        mvc.perform(get("/api/v1/tours/slug-tour-abc")
+                .contextPath("/api/v1").servletPath("/tours/slug-tour-abc"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(id))
+            .andExpect(jsonPath("$.slug").value("slug-tour-abc"))
+            .andExpect(jsonPath("$.title").value("Slug Tour"))
+            // startDates luôn có mặt (mảng rỗng khi tour chưa có ngày khởi hành nào).
+            .andExpect(jsonPath("$.startDates").isArray());
+
+        // Cùng một tour, tra bằng id dạng số vẫn ra kết quả như vậy.
+        mvc.perform(get("/api/v1/tours/" + id).contextPath("/api/v1").servletPath("/tours/" + id))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.slug").value("slug-tour-abc"));
+    }
+
+    // /tours/{slug} nhận chuỗi nên "not-a-number" là slug hợp lệ về kiểu, chỉ là không tồn tại.
+    @Test
+    void detailForUnknownSlugReturns404() throws Exception {
         mvc.perform(get("/api/v1/tours/not-a-number")
                 .contextPath("/api/v1").servletPath("/tours/not-a-number"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.error.message").value("Không tìm thấy tour"));
+    }
+
+    // Endpoint con vẫn định danh bằng id kiểu Long -> vẫn phải trả 400 với message sạch.
+    @Test
+    void pathVariableTypeMismatchReturnsCleanMessage() throws Exception {
+        mvc.perform(get("/api/v1/tours/not-a-number/availability")
+                .contextPath("/api/v1").servletPath("/tours/not-a-number/availability"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.error.message").value("Parameter 'id' must be of type Long"))
+            .andExpect(jsonPath("$.error.message").value("Tham số 'id' phải thuộc kiểu Long"))
             // Không được lộ message nội bộ của Spring.
             .andExpect(jsonPath("$.error.message", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
@@ -274,8 +306,8 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("minPrice", "abc"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
-            .andExpect(jsonPath("$.error.fields.minPrice").value("must be of type BigDecimal"))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION"))
+            .andExpect(jsonPath("$.error.fields.minPrice").value("phải thuộc kiểu BigDecimal"))
             .andExpect(jsonPath("$.error.fields.minPrice", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
     }

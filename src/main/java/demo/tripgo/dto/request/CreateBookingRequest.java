@@ -10,24 +10,24 @@ import java.time.LocalDate;
 
 // Body đặt tour. Không nhận userId/totalPrice từ client — server tự lấy user từ JWT và tự tính tiền.
 public record CreateBookingRequest(
-    @NotNull(message = "tourId is required")
+    @NotNull(message = "tourId không được để trống")
     Long tourId,
 
-    @NotNull(message = "date is required")
-    @FutureOrPresent(message = "date must be today or in the future")
+    @NotNull(message = "date không được để trống")
+    @FutureOrPresent(message = "date phải là hôm nay hoặc một ngày trong tương lai")
     LocalDate date,
 
-    @NotNull(message = "adults is required")
-    @Min(value = 1, message = "adults must be at least 1")
-    @Max(value = 100, message = "adults must not exceed 100")
+    @NotNull(message = "adults không được để trống")
+    @Min(value = 1, message = "adults phải ít nhất là 1")
+    @Max(value = 100, message = "adults không được vượt quá 100")
     Integer adults,
 
-    @NotNull(message = "children is required")
-    @Min(value = 0, message = "children must be at least 0")
-    @Max(value = 100, message = "children must not exceed 100")
+    @NotNull(message = "children không được để trống")
+    @Min(value = 0, message = "children không được nhỏ hơn 0")
+    @Max(value = 100, message = "children không được vượt quá 100")
     Integer children,
 
-    @NotNull(message = "contact is required")
+    @NotNull(message = "contact không được để trống")
     @Valid
     ContactRequest contact
 ) {

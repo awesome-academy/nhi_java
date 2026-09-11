@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
-        return build(HttpStatus.CONFLICT, "Data conflicts with existing records or database constraints");
+        return build(HttpStatus.CONFLICT, "Dữ liệu bị trùng với bản ghi đã tồn tại");
     }
 
     @ExceptionHandler({EmailAlreadyExistsException.class, ReviewAlreadyExistsException.class,
@@ -31,9 +31,17 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, exception.getMessage());
     }
 
+    // Hợp đồng 6.2 quy định code riêng INVALID_CREDENTIALS (không dùng tên HttpStatus).
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException exception) {
-        return build(HttpStatus.UNAUTHORIZED, exception.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ErrorResponse.of("INVALID_CREDENTIALS", exception.getMessage()));
+    }
+
+    // Tài nguyên có tồn tại nhưng người gọi chưa đủ điều kiện -> 403.
+    @ExceptionHandler(ReviewNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleReviewNotAllowed(ReviewNotAllowedException exception) {
+        return build(HttpStatus.FORBIDDEN, exception.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -57,9 +65,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
         String type = exception.getRequiredType() != null
             ? exception.getRequiredType().getSimpleName()
-            : "the expected type";
+            : "kiểu dữ liệu mong đợi";
         return build(HttpStatus.BAD_REQUEST,
-            "Parameter '" + exception.getName() + "' must be of type " + type);
+            "Tham số '" + exception.getName() + "' phải thuộc kiểu " + type);
     }
 
     // Lỗi bean-validation trên body (@Valid) → 422 kèm map trường lỗi.
@@ -88,15 +96,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(ErrorResponse.of(status.name(), message));
     }
 
+    // Hợp đồng 6.5 quy định code riêng VALIDATION (không dùng tên HttpStatus).
     private ResponseEntity<ErrorResponse> buildValidation(Map<String, String> fields) {
-        HttpStatus status = HttpStatus.UNPROCESSABLE_ENTITY;
-        return ResponseEntity.status(status).body(ErrorResponse.of(status.name(), "Validation failed", fields));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+            .body(ErrorResponse.of("VALIDATION", "Dữ liệu không hợp lệ", fields));
     }
 
     // Lỗi ép kiểu khi bind (vd minPrice=abc): thay message nội bộ của Spring bằng "must be of type X".
     private String fieldErrorMessage(FieldError error) {
         if ("typeMismatch".equals(error.getCode())) {
-            return "must be of type " + requiredTypeName(error);
+            return "phải thuộc kiểu " + requiredTypeName(error);
         }
         return error.getDefaultMessage();
     }
@@ -110,6 +119,6 @@ public class GlobalExceptionHandler {
         } catch (RuntimeException ignored) {
             // Không lấy được kiểu yêu cầu thì dùng mô tả chung bên dưới.
         }
-        return "the expected type";
+        return "kiểu dữ liệu mong đợi";
     }
 }

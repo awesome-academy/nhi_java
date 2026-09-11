@@ -4,21 +4,21 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-// Danh sách đánh giá phân trang kèm điểm trung bình của tour ({ data, total, page, size, averageRating }).
+// Danh sách đánh giá phân trang kèm điểm trung bình của tour ({ data, total, page, limit, avgRating }).
 public record ReviewPageResponse(
     List<ReviewResponse> data,
     long total,
     int page,
-    int size,
-    double averageRating
+    int limit,
+    double avgRating
 ) {
-    public static ReviewPageResponse of(Page<ReviewResponse> page, double averageRating) {
+    public static ReviewPageResponse of(Page<ReviewResponse> page, double avgRating) {
         return new ReviewPageResponse(
             page.getContent(),
             page.getTotalElements(),
             page.getNumber() + 1,
             page.getSize(),
-            averageRating
+            avgRating
         );
     }
 }

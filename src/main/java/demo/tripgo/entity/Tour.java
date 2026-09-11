@@ -50,11 +50,11 @@ public class Tour {
     @Column(name = "duration_days", nullable = false)
     private int durationDays;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal price;
 
     // Giá khuyến mãi (nếu có); null nghĩa là không giảm giá.
-    @Column(name = "discount_price", precision = 12, scale = 2)
+    @Column(name = "discount_price", precision = 12, scale = 0)
     private BigDecimal discountPrice;
 
     @Column(name = "rating_avg", nullable = false)

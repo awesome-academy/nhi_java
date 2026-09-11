@@ -1,12 +1,16 @@
 package demo.tripgo.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
+// Một đánh giá theo hợp đồng 6.3: người đánh giá là object lồng { name },
+// createdAt chỉ lấy phần ngày (giống cách BookingResponse xuất createdAt).
 public record ReviewResponse(
     Long id,
-    String userFullName,
+    Reviewer user,
     int rating,
     String comment,
-    LocalDateTime createdAt
+    LocalDate createdAt
 ) {
+    public record Reviewer(String name) {
+    }
 }
