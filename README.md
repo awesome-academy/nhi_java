@@ -21,6 +21,10 @@ source .env
 
 `JWT_SECRET` là bắt buộc, không có giá trị mặc định.
 `JWT_EXPIRATION` tính bằng mili giây, mặc định `86400000` (24 giờ).
+
+Các biến môi trường khác (đều có default cho dev): `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`,
+`SERVER_PORT`, `CORS_ALLOWED_ORIGINS` (mặc định `*`, prod nên đặt cụ thể),
+`RATE_LIMIT_AUTH_MAX` (mặc định 20), `RATE_LIMIT_AUTH_WINDOW` (giây, mặc định 60).
 JwtService hiện dùng trực tiếp UTF-8 của chuỗi secret làm khóa; chuỗi Base64
 từ lệnh trên được dùng nguyên vẹn, không giải mã Base64.
 

@@ -1,7 +1,5 @@
 package demo.tripgo.dto.response;
 
-import demo.tripgo.entity.TourCategory;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -9,14 +7,15 @@ import java.util.List;
 public record TourDetailResponse(
     Long id,
     String title,
+    String slug,
     DestinationResponse destination,
-    TourCategory category,
+    String category,
     int durationDays,
     BigDecimal price,
     BigDecimal discountPrice,
-    double ratingAvg,
+    double rating,
     int reviewCount,
-    int maxGuests,
+    int maxGroupSize,
     String description,
     List<String> highlights,
     List<String> included,

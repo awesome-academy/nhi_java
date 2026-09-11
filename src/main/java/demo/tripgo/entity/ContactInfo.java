@@ -19,4 +19,7 @@ public class ContactInfo {
 
     @Column(name = "contact_phone", nullable = false, length = 30)
     private String phone;
+
+    @Column(name = "contact_note", length = 500)
+    private String note;
 }

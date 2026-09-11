@@ -61,7 +61,7 @@ public class TourService {
         );
         TourSort sort = TourSort.from(request.sort());
         Pageable pageable = PageRequest.of(
-            request.pageOrDefault() - 1, request.limitOrDefault(), sort.toSort());
+            request.pageOrDefault() - 1, request.sizeOrDefault(), sort.toSort());
 
         Page<Tour> result = tourRepository.findAll(TourSpecifications.withFilter(filter), pageable);
         return PageResponse.of(result.map(tourMapper::toSummary));

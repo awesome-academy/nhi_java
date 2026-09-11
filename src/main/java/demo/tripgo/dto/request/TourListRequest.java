@@ -18,16 +18,16 @@ public record TourListRequest(
     @Min(value = 1, message = "page must be >= 1")
     Integer page,
 
-    @Min(value = 1, message = "limit must be >= 1")
-    @Max(value = PageQuery.MAX_LIMIT, message = "limit must be <= " + PageQuery.MAX_LIMIT)
-    Integer limit
+    @Min(value = 1, message = "size must be >= 1")
+    @Max(value = PageQuery.MAX_SIZE, message = "size must be <= " + PageQuery.MAX_SIZE)
+    Integer size
 ) {
     // Tái dùng logic phân trang chung; không truyền thì dùng mặc định (giá trị sai đã bị @Min/@Max chặn).
     public int pageOrDefault() {
         return PageQuery.pageOrDefault(page);
     }
 
-    public int limitOrDefault() {
-        return PageQuery.limitOrDefault(limit);
+    public int sizeOrDefault() {
+        return PageQuery.sizeOrDefault(size);
     }
 }

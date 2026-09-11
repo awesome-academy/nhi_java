@@ -1,9 +1,9 @@
 package demo.tripgo.service;
 
 import demo.tripgo.dto.request.CreateBookingRequest;
-import demo.tripgo.dto.response.BookingActionResponse;
 import demo.tripgo.dto.response.BookingResponse;
-import demo.tripgo.dto.response.ListResponse;
+import demo.tripgo.dto.response.BookingSummaryResponse;
+import demo.tripgo.dto.response.PageResponse;
 import demo.tripgo.entity.Booking;
 import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.entity.ContactInfo;
@@ -21,6 +21,10 @@ import demo.tripgo.repository.TourRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,7 +56,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingActionResponse createBooking(User user, CreateBookingRequest request) {
+    public BookingResponse createBooking(User user, CreateBookingRequest request) {
         Tour tour = tourRepository.findById(request.tourId())
             .orElseThrow(() -> new ResourceNotFoundException("Tour", request.tourId()));
 
@@ -76,21 +80,22 @@ public class BookingService {
         booking.setAdults(request.adults());
         booking.setChildren(request.children());
         booking.setTotalPrice(totalPrice(tour, guests));
-        booking.setStatus(BookingStatus.CONFIRMED);
+        // Đơn mới ở trạng thái PENDING (chờ xác nhận/thanh toán) theo hợp đồng 6.5.
+        booking.setStatus(BookingStatus.PENDING);
         booking.setContact(toContactInfo(request));
         Booking saved = bookingRepository.save(booking);
 
         // Sinh mã đơn từ id (đảm bảo duy nhất) sau khi đã có id.
         saved.setCode(generateCode(saved.getId()));
-        return bookingMapper.toCreateResponse(saved);
+        return bookingMapper.toResponse(saved);
     }
 
-    public ListResponse<BookingResponse> getMyBookings(User user) {
-        return ListResponse.of(
-            bookingRepository.findByUserIdOrderByCreatedAtDesc(user.getId()).stream()
-                .map(bookingMapper::toResponse)
-                .toList()
-        );
+    // Đơn của tôi, phân trang, mới nhất trước.
+    public PageResponse<BookingSummaryResponse> getMyBookings(User user, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size,
+            Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
+        Page<Booking> result = bookingRepository.findByUserId(user.getId(), pageable);
+        return PageResponse.of(result.map(bookingMapper::toSummary));
     }
 
     public BookingResponse getMyBooking(User user, Long id) {
@@ -100,7 +105,7 @@ public class BookingService {
     }
 
     @Transactional
-    public BookingActionResponse cancelBooking(User user, Long id) {
+    public BookingResponse cancelBooking(User user, Long id) {
         Booking booking = bookingRepository.findByIdAndUserId(id, user.getId())
             .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -114,7 +119,7 @@ public class BookingService {
         Departure departure = booking.getDeparture();
         entityManager.refresh(departure, LockModeType.PESSIMISTIC_WRITE);
         departure.setBookedSeats(departure.getBookedSeats() - (booking.getAdults() + booking.getChildren()));
-        return bookingMapper.toCancelResponse(booking);
+        return bookingMapper.toResponse(booking);
     }
 
     // Giá mỗi khách = giá KM nếu có, ngược lại giá gốc; tổng = giá * tổng số khách.
@@ -132,6 +137,7 @@ public class BookingService {
         contact.setFullName(request.contact().fullName());
         contact.setEmail(request.contact().email());
         contact.setPhone(request.contact().phone());
+        contact.setNote(request.contact().note());
         return contact;
     }
 }

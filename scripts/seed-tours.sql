@@ -2,6 +2,10 @@
 -- Chạy: PGPASSWORD=postgres psql -h localhost -U postgres -d tripgo -f scripts/seed-tours.sql
 -- Chạy lại nhiều lần an toàn: xoá sạch dữ liệu tour trước khi seed.
 
+-- ddl-auto:update không cập nhật check constraint của enum khi thêm giá trị mới (vd BookingStatus.PENDING).
+-- Gỡ constraint cũ để tránh lỗi "bookings_status_check" trên DB dev đã tồn tại từ trước (idempotent).
+ALTER TABLE IF EXISTS bookings DROP CONSTRAINT IF EXISTS bookings_status_check;
+
 TRUNCATE reviews, tour_departures, tour_images, tour_itinerary_days, tour_highlights, tour_included,
     tour_excluded, tours, destinations RESTART IDENTITY CASCADE;
 
@@ -136,3 +140,9 @@ INSERT INTO reviews (tour_id, user_id, rating, comment, created_at) VALUES
 
 -- rating_avg/review_count phải khớp với review thật vừa seed (avg(5,4)=4.5, count=2).
 UPDATE tours SET rating_avg = 4.5, review_count = 2 WHERE title = 'Sa Pa Mountain Retreat';
+
+-- Sinh slug thân thiện URL, duy nhất (chuẩn hoá title + đính id để tránh trùng).
+UPDATE tours
+SET slug = lower(regexp_replace(regexp_replace(title, '[^a-zA-Z0-9]+', '-', 'g'), '(^-|-$)', '', 'g'))
+           || '-' || id
+WHERE slug IS NULL;

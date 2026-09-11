@@ -13,3 +13,10 @@ spring:
 jwt:
   secret: test-only-jwt-signing-key-not-for-production-0123456789
   expiration: 86400000
+
+# Test dùng chung IP 127.0.0.1 nên đặt ngưỡng rất cao để rate limit không nhiễu các test khác.
+# Hành vi 429 được kiểm riêng ở RateLimitFilterTest (unit, không phụ thuộc profile này).
+ratelimit:
+  auth:
+    max-requests: 100000
+    window-seconds: 60

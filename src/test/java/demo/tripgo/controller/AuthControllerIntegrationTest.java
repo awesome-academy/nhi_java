@@ -76,8 +76,8 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me")
                 .contextPath("/api/v1").servletPath("/auth/me"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.status").value(401))
-            .andExpect(jsonPath("$.message").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
 
     @Test
@@ -89,8 +89,8 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/auth/me")
                 .contextPath("/api/v1").servletPath("/auth/me"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.status").value(401))
-            .andExpect(jsonPath("$.message").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
 
     @Test
@@ -144,10 +144,9 @@ class AuthControllerIntegrationTest {
                     {"email":"%s","password":"password123"}
                     """.formatted(email)))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.status").value(401))
-            .andExpect(jsonPath("$.message").value("User account is not active"))
-            .andExpect(jsonPath("$.errors").isEmpty())
-            .andExpect(jsonPath("$.timestamp").isNotEmpty())
+            .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+            .andExpect(jsonPath("$.error.message").value("User account is not active"))
+            .andExpect(jsonPath("$.error.fields").doesNotExist())
             .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
     }
 
@@ -178,11 +177,10 @@ class AuthControllerIntegrationTest {
                         {"email":"short-login@example.com","password":"%s"}
                         """.formatted(password)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.status").value(401))
-                .andExpect(jsonPath("$.message").value("Invalid email or password"))
-                .andExpect(jsonPath("$.errors").isMap())
-                .andExpect(jsonPath("$.errors").isEmpty())
-                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.error.message").value("Invalid email or password"))
+                .andExpect(jsonPath("$.error.fields").doesNotExist())
+                .andExpect(jsonPath("$.error.fields").doesNotExist())
                 .andExpect(jsonPath("$.accessToken").doesNotHaveJsonPath());
         }
     }
@@ -196,7 +194,7 @@ class AuthControllerIntegrationTest {
                     .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors.password").value("Password is required"));
+                .andExpect(jsonPath("$.error.fields.password").value("Password is required"));
         }
     }
 
@@ -225,7 +223,7 @@ class AuthControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(request.formatted("MIXED.CASE@EXAMPLE.COM")))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.message").value("Email already exists: mixed.case@example.com"));
+            .andExpect(jsonPath("$.error.message").value("Email already exists: mixed.case@example.com"));
     }
 
     @Test
@@ -250,9 +248,9 @@ class AuthControllerIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(request))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.status").value(409))
-            .andExpect(jsonPath("$.message").value("Data conflicts with existing records or database constraints"))
-            .andExpect(jsonPath("$.errors").isEmpty());
+            .andExpect(jsonPath("$.error.code").value("CONFLICT"))
+            .andExpect(jsonPath("$.error.message").value("Data conflicts with existing records or database constraints"))
+            .andExpect(jsonPath("$.error.fields").doesNotExist());
     }
 
     static Stream<String> oversizedPasswords() {
@@ -270,7 +268,7 @@ class AuthControllerIntegrationTest {
                 {"fullName":"Nguyen Van An","email":"oversized@example.com","password":"%s"}
                 """.formatted(password)))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.errors.password").value("Password must not exceed 72 UTF-8 bytes"));
+            .andExpect(jsonPath("$.error.fields.password").value("Password must not exceed 72 UTF-8 bytes"));
     }
 
     static Stream<String> boundaryPasswords() {
@@ -300,11 +298,11 @@ class AuthControllerIntegrationTest {
                 {"fullName":" ","email":"invalid-email","password":"1234567"}
                 """))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422))
-            .andExpect(jsonPath("$.message").value("Validation failed"))
-            .andExpect(jsonPath("$.errors.fullName").value("Full name is required"))
-            .andExpect(jsonPath("$.errors.email").value("Email is invalid"))
-            .andExpect(jsonPath("$.errors.password").value("Password must contain at least 8 characters"));
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.message").value("Validation failed"))
+            .andExpect(jsonPath("$.error.fields.fullName").value("Full name is required"))
+            .andExpect(jsonPath("$.error.fields.email").value("Email is invalid"))
+            .andExpect(jsonPath("$.error.fields.password").value("Password must contain at least 8 characters"));
 
         assertThat(userRepository.findByEmail("invalid-email")).isEmpty();
     }

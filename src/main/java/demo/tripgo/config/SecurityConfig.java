@@ -2,10 +2,13 @@ package demo.tripgo.config;
 
 import demo.tripgo.security.JwtAuthenticationFilter;
 import demo.tripgo.security.SecurityErrorResponder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -13,8 +16,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
+import java.util.List;
+
+// @EnableMethodSecurity bật @PreAuthorize để kiểm quyền ở tầng method (bổ trợ cho URL matcher).
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -33,6 +44,27 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // CORS: origin đọc từ cors.allowed-origins (biến môi trường CORS_ALLOWED_ORIGINS, mặc định "*").
+    // Dùng Bearer token nên không cần allowCredentials -> "*" hợp lệ.
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+        @Value("${cors.allowed-origins:*}") String allowedOrigins
+    ) {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isEmpty())
+            .toList());
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowCredentials(false);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
     // Chỉ chạy JWT filter trong security chain, không đăng ký thêm ở servlet container.
     @Bean
     public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration() {
@@ -48,6 +80,8 @@ public class SecurityConfig {
         http
             // Tắt CSRF vì ứng dụng cung cấp REST API stateless, không xác thực bằng session/cookie.
             .csrf(AbstractHttpConfigurer::disable)
+            // Bật CORS dùng CorsConfigurationSource bên dưới (origin lấy từ biến môi trường).
+            .cors(Customizer.withDefaults())
             // 401 (chưa xác thực) và 403 (thiếu quyền) đều trả ErrorResponse như GlobalExceptionHandler,
             .exceptionHandling(exceptions -> exceptions
                 .authenticationEntryPoint((request, response, exception) ->

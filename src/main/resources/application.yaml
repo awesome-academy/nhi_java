@@ -3,9 +3,9 @@ spring:
     name: tripgo
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/tripgo
-    username: postgres
-    password: postgres
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tripgo}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
 
   jpa:
     hibernate:
@@ -18,7 +18,7 @@ spring:
         format_sql: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /api/v1
 
@@ -26,3 +26,13 @@ jwt:
   secret: ${JWT_SECRET}
   # 24h
   expiration: ${JWT_EXPIRATION:86400000}
+
+# Origin được phép gọi API (CSV). Mặc định "*" cho dev; prod nên set CORS_ALLOWED_ORIGINS cụ thể.
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
+# Rate limit chống brute-force cho POST /auth/** (số request mỗi IP mỗi cửa sổ).
+ratelimit:
+  auth:
+    max-requests: ${RATE_LIMIT_AUTH_MAX:20}
+    window-seconds: ${RATE_LIMIT_AUTH_WINDOW:60}

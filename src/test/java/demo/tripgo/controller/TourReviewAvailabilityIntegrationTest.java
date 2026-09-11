@@ -140,7 +140,7 @@ class TourReviewAvailabilityIntegrationTest {
                 .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/availability")
                 .param("month", "2026-13"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400));
+            .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }
 
     @Test
@@ -148,7 +148,7 @@ class TourReviewAvailabilityIntegrationTest {
         mvc.perform(get("/api/v1/tours/999999/availability")
                 .contextPath("/api/v1").servletPath("/tours/999999/availability"))
             .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.status").value(404));
+            .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
     }
 
     // ---- GET /tours/{id}/reviews ----
@@ -178,7 +178,7 @@ class TourReviewAvailabilityIntegrationTest {
 
         mvc.perform(get("/api/v1/tours/" + tour.getId() + "/reviews")
                 .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
-                .param("page", "1").param("limit", "10"))
+                .param("page", "1").param("size", "10"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(2))
             .andExpect(jsonPath("$.page").value(1))
@@ -205,7 +205,7 @@ class TourReviewAvailabilityIntegrationTest {
         mvc.perform(get("/api/v1/tours/" + tour.getId())
                 .contextPath("/api/v1").servletPath("/tours/" + tour.getId()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.ratingAvg").value(5.0))
+            .andExpect(jsonPath("$.rating").value(5.0))
             .andExpect(jsonPath("$.reviewCount").value(1));
     }
 
@@ -230,7 +230,7 @@ class TourReviewAvailabilityIntegrationTest {
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "again")))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.status").value(409));
+            .andExpect(jsonPath("$.error.code").value("CONFLICT"));
     }
 
     @Test
@@ -241,7 +241,7 @@ class TourReviewAvailabilityIntegrationTest {
                     .header("Authorization", tokenFor(saveUser()))
                     .contentType(MediaType.APPLICATION_JSON).content(reviewBody(rating, "x")))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.errors.rating").isNotEmpty());
+                .andExpect(jsonPath("$.error.fields.rating").isNotEmpty());
         }
     }
 
@@ -263,7 +263,7 @@ class TourReviewAvailabilityIntegrationTest {
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "again")))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.containsString("already reviewed")));
+            .andExpect(jsonPath("$.error.message", org.hamcrest.Matchers.containsString("already reviewed")));
     }
 
     @Test
@@ -273,6 +273,6 @@ class TourReviewAvailabilityIntegrationTest {
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "x")))
             .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.status").value(404));
+            .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
     }
 }

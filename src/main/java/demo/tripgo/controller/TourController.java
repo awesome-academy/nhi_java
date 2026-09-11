@@ -12,6 +12,7 @@ import demo.tripgo.dto.response.TourDetailResponse;
 import demo.tripgo.dto.response.TourSummaryResponse;
 import demo.tripgo.entity.User;
 import demo.tripgo.security.AuthUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import demo.tripgo.service.ReviewService;
 import demo.tripgo.service.TourService;
 import jakarta.validation.Valid;
@@ -62,10 +63,11 @@ public class TourController {
         @Valid PageQuery request
     ) {
         return ResponseEntity.ok(
-            reviewService.getReviews(id, request.pageOrDefault(), request.limitOrDefault()));
+            reviewService.getReviews(id, request.pageOrDefault(), request.sizeOrDefault()));
     }
 
     @PostMapping("/{id}/reviews")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CreateReviewResponse> createReview(
         @PathVariable Long id,
         @AuthenticationPrincipal User user,

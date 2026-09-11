@@ -34,6 +34,10 @@ public class Tour {
     @Column(nullable = false, length = 200)
     private String title;
 
+    // Định danh thân thiện URL, duy nhất (theo mô hình dữ liệu 6.1).
+    @Column(unique = true, length = 250)
+    private String slug;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "destination_id", nullable = false)
     private Destination destination;
