@@ -138,18 +138,6 @@ public class SecurityConfig {
                     "/bookings/*"
                 ).authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/bookings/*/cancel").authenticated()
-                .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
-                .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
-                .requestMatchers(HttpMethod.POST, "/admin/tours").hasRole("ADMIN")
-                .requestMatchers(
-                    HttpMethod.PUT,
-                    "/admin/tours/*"
-                ).hasRole("ADMIN")
-                .requestMatchers(
-                    HttpMethod.DELETE,
-                    "/admin/tours/*"
-                ).hasRole("ADMIN")
 
                 // Mọi endpoint chưa được liệt kê ở trên đều yêu cầu xác thực.
                 .anyRequest().authenticated()
