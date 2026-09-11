@@ -103,21 +103,78 @@ SELECT t.id, CURRENT_DATE + (g * 7), 25, (g * 5)
 FROM tours t, generate_series(1, 3) AS g
 WHERE t.title LIKE 'Gói khám phá %' AND (t.id % 4 = 0);
 
--- 4) User seed (chỉ để gán tên người đánh giá; mật khẩu là placeholder, không dùng để đăng nhập)
---    và review thật cho một tour, kèm đồng bộ rating denormalized.
+-- 4) Tài khoản seed. Mật khẩu là hash BCrypt THẬT nên đăng nhập được ngay:
+--    admin@tripgo.vn / admin123   (ROLE_ADMIN)
+--    các tài khoản còn lại / password123
 INSERT INTO users (full_name, email, password, role, status, created_at, updated_at) VALUES
-    ('Nguyễn Thị Mai', 'seed.mai@example.com',  '$2a$10$placeholderplaceholderplaceholderplaceholderph', 'USER', 'ACTIVE', now(), now()),
-    ('Trần Văn Bình',  'seed.binh@example.com', '$2a$10$placeholderplaceholderplaceholderplaceholderph', 'USER', 'ACTIVE', now(), now())
+    ('Quản trị viên',  'admin@tripgo.vn',       '$2a$10$E.Kph5bgeIqFALBWdhL7veYOlE1rz8esGNYI4efb.c0riBI/MdQI6', 'ADMIN', 'ACTIVE', now(), now()),
+    ('Nguyễn Thị Mai', 'seed.mai@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Trần Văn Bình',  'seed.binh@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Lê Thu Hà',      'seed.ha@example.com',   '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Phạm Quốc Anh',  'seed.anh@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Vũ Minh Châu',   'seed.chau@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Đỗ Hoàng Long',  'seed.long@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Bùi Khánh Linh', 'seed.linh@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Ngô Gia Bảo',    'seed.bao@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Đặng Thuỳ Dung',  'seed.dung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Hoàng Nhật Nam',  'seed.nam@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Trịnh Bảo Ngọc',  'seed.ngoc@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Lý Thanh Tùng',   'seed.tung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Mai Phương Thảo', 'seed.thao@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Chu Việt Hưng',   'seed.hung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now())
 ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO reviews (tour_id, user_id, rating, comment, created_at) VALUES
-    ((SELECT id FROM tours WHERE title='Nghỉ dưỡng núi Sa Pa'),
-     (SELECT id FROM users WHERE email='seed.mai@example.com'),  5, 'Cảnh đẹp ngoài sức tưởng tượng, hướng dẫn viên nhiệt tình.', now() - interval '2 days'),
-    ((SELECT id FROM tours WHERE title='Nghỉ dưỡng núi Sa Pa'),
-     (SELECT id FROM users WHERE email='seed.binh@example.com'), 4, 'Chuyến đi đáng giá nhưng buổi tối hơi lạnh.', now() - interval '1 day');
+-- Đánh giá: rải trên nhiều tour, đủ nhiều để test phân trang (?page=2&limit=10).
+-- Số review mỗi tour = 1 + (id % 12) -> có tour tới 12 đánh giá, đủ để ?page=2&limit=10 ra 2 trang.
+-- Điểm sinh quanh rating_avg ĐÃ SEED của tour (±1 theo người) nên sau khi đồng bộ lại,
+-- phân hoá đánh giá vẫn giữ nguyên: tour cố ý 2.0 vẫn thấp, tour 5.0 vẫn cao, biên 4.5 vẫn ~4.5.
+-- Nhờ vậy lọc ?rating= và sort=rating_desc vẫn có ý nghĩa.
+-- Unique (tour_id, user_id) được tôn trọng vì mỗi người chỉ xuất hiện một lần cho một tour.
+INSERT INTO reviews (tour_id, user_id, rating, comment, created_at)
+SELECT t.id,
+       u.id,
+       greatest(1, least(5, round(t.rating_avg)::int + ((u.id % 3) - 1))),
+       (ARRAY[
+          'Chuyến đi đúng như mô tả, hướng dẫn viên thân thiện.',
+          'Lịch trình hợp lý, ăn uống ổn.',
+          'Cảnh đẹp, sẽ quay lại lần nữa.',
+          'Giá hơi cao so với chất lượng phòng.',
+          'Di chuyển khá nhiều nhưng bù lại nhiều điểm tham quan.',
+          'Hướng dẫn viên nhiệt tình, đáng tiền.'
+        ])[1 + ((t.id + u.id) % 6)],
+       now() - (((t.id + u.id) % 60) || ' days')::interval
+FROM tours t
+JOIN LATERAL (
+    SELECT id, row_number() OVER (ORDER BY id) AS rn
+    FROM users WHERE role = 'USER'
+) u ON u.rn <= 1 + (t.id % 12)
+WHERE NOT EXISTS (
+    SELECT 1 FROM reviews r WHERE r.tour_id = t.id AND r.user_id = u.id
+);
 
--- rating_avg/review_count phải khớp với review thật vừa seed (avg(5,4)=4.5, count=2).
-UPDATE tours SET rating_avg = 4.5, review_count = 2 WHERE title = 'Nghỉ dưỡng núi Sa Pa';
+-- rating_avg/review_count là dữ liệu denormalized -> phải khớp bảng reviews, nếu không
+-- màn chi tiết sẽ hiện "3 đánh giá" trong khi danh sách đánh giá rỗng.
+UPDATE tours t
+SET rating_avg   = coalesce(agg.avg_rating, 0),
+    review_count = coalesce(agg.cnt, 0)
+FROM (SELECT t2.id,
+             round(avg(r.rating)::numeric, 1) AS avg_rating,
+             count(r.id) AS cnt
+      FROM tours t2 LEFT JOIN reviews r ON r.tour_id = t2.id
+      GROUP BY t2.id) agg
+WHERE t.id = agg.id;
+
+-- Ngày khởi hành cho những tour chưa có, trừ tour cố ý để trống (test availability rỗng).
+-- 3 mốc tương lai, số chỗ đã đặt khác nhau để có cả chuyến còn nhiều, còn ít và hết chỗ.
+INSERT INTO tour_departures (tour_id, departure_date, total_seats, booked_seats)
+SELECT t.id,
+       CURRENT_DATE + ((g * 9) + (t.id % 5))::int,
+       (20 + (t.id % 3) * 5)::int,
+       (CASE WHEN g = 3 AND t.id % 7 = 0 THEN 20 + (t.id % 3) * 5   -- thỉnh thoảng có chuyến hết chỗ
+             ELSE (g * 4 + (t.id % 6)) END)::int
+FROM tours t, generate_series(1, 3) AS g
+WHERE t.title <> 'Tĩnh dưỡng Đà Lạt chưa mở chuyến'
+  AND NOT EXISTS (SELECT 1 FROM tour_departures d WHERE d.tour_id = t.id);
 
 -- ============================================================================
 -- 5) Phủ chi tiết (ảnh / lịch trình / highlights / included / excluded) cho MỌI tour,

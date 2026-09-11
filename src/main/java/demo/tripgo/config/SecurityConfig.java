@@ -109,6 +109,11 @@ public class SecurityConfig {
                     "/swagger-ui/**",
                     "/swagger-ui.html"
                 ).permitAll()
+                // Trang lỗi nội bộ của Spring: khi có exception chưa được GlobalExceptionHandler bắt,
+                // request được forward sang /error mà SecurityContext đã mất (filter không chạy lại
+                // trên ERROR dispatch). Không permitAll thì client nhận 401 che mất lỗi thật.
+                .requestMatchers("/error").permitAll()
+
                 // Cho phép người chưa đăng nhập gọi API đăng ký và đăng nhập.
                 // Matcher không gồm context-path /api/v1 vì servlet container đã tách phần này.
                 .requestMatchers(
@@ -138,6 +143,11 @@ public class SecurityConfig {
                     "/bookings/*"
                 ).authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/bookings/*/cancel").authenticated()
+
+                // Wishlist: toàn bộ đều là thao tác trên dữ liệu riêng của user đang đăng nhập.
+                .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
 
                 // Mọi endpoint chưa được liệt kê ở trên đều yêu cầu xác thực.
                 .anyRequest().authenticated()

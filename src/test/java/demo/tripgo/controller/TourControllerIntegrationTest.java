@@ -295,7 +295,7 @@ class TourControllerIntegrationTest {
                 .contextPath("/api/v1").servletPath("/tours/not-a-number/availability"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.error.message").value("Tham số 'id' phải thuộc kiểu Long"))
+            .andExpect(jsonPath("$.error.message").value("Tham số 'id' phải là số nguyên"))
             // Không được lộ message nội bộ của Spring.
             .andExpect(jsonPath("$.error.message", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
@@ -307,7 +307,7 @@ class TourControllerIntegrationTest {
                 .param("minPrice", "abc"))
             .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.error.code").value("VALIDATION"))
-            .andExpect(jsonPath("$.error.fields.minPrice").value("phải thuộc kiểu BigDecimal"))
+            .andExpect(jsonPath("$.error.fields.minPrice").value("minPrice phải là số"))
             .andExpect(jsonPath("$.error.fields.minPrice", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
     }

@@ -21,6 +21,7 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 | F5 | Đặt tour, danh sách đơn của tôi, chi tiết đơn, huỷ đơn |
 | F6 | Đánh giá tour (xem danh sách công khai, tạo đánh giá khi đã đăng nhập) |
 | F7 | Danh sách điểm đến (kèm số tour) và loại hình tour (kèm nhãn tiếng Việt) |
+| F8 | Wishlist: lưu / bỏ / xem tour quan tâm của riêng mình |
 
 ## 2. Danh sách API
 
@@ -40,6 +41,9 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 | GET | `/bookings` | user | Đơn của tôi (phân trang) |
 | GET | `/bookings/{id}` | user | Chi tiết đơn của tôi |
 | PATCH | `/bookings/{id}/cancel` | user | Huỷ đơn |
+| GET | `/wishlist` | user | Tour đã lưu của tôi |
+| POST | `/wishlist` | user | Thêm tour vào wishlist |
+| DELETE | `/wishlist/{tourId}` | user | Bỏ tour khỏi wishlist |
 
 **Tham số của `GET /tours`:** `q`, `destination` (slug), `category`
 (`beach|mountain|city|trekking|cruise|cultural`), `minPrice`, `maxPrice`, `duration`, `rating`,
@@ -105,13 +109,25 @@ PGPASSWORD=postgres psql -h localhost -U postgres -d tripgo -f scripts/seed-tour
 PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d tripgo -f scripts/seed-tours.sql
 ```
 
-Script chạy lại nhiều lần an toàn (xoá sạch dữ liệu tour trước khi seed). Sau khi seed:
-tour `id=1` có nhiều ngày khởi hành, tour `id=2` cố tình không có ngày nào để thử case rỗng.
+Script chạy lại nhiều lần an toàn (xoá sạch dữ liệu tour trước khi seed). Sau khi seed có:
+
+- **55 tour** thuộc **8 điểm đến**, tất cả đều có ảnh, lịch trình và ngày khởi hành
+  (riêng *Tĩnh dưỡng Đà Lạt chưa mở chuyến* cố ý để trống, dùng thử case `availability` rỗng)
+- **347 đánh giá** rải trên mọi tour, tour nhiều nhất có 12 — đủ để thử `?page=2&limit=10`
+- **1 admin + 14 tài khoản người dùng**, mật khẩu là hash BCrypt thật nên đăng nhập được ngay:
+
+  | Tài khoản | Mật khẩu | Role |
+  |---|---|---|
+  | `admin@tripgo.vn` | `admin123` | ADMIN |
+  | `seed.mai@example.com` (và các `seed.*`) | `password123` | USER |
+
+`rating_avg`/`review_count` trên bảng `tours` được đồng bộ đúng bằng dữ liệu thật trong bảng
+`reviews`, nhưng vẫn giữ phân hoá (2.3 → 4.7) để lọc `?rating=` và `sort=rating_desc` có ý nghĩa.
 
 ## 6. Thử API
 
 Mở [`docs/api.http`](docs/api.http) trong IntelliJ IDEA (HTTP Client) hoặc VS Code
-(extension *REST Client*) rồi bấm **Send Request**. File phủ đủ 14 endpoint kèm các case lỗi
+(extension *REST Client*) rồi bấm **Send Request**. File phủ đủ 17 endpoint kèm các case lỗi
 (401/403/404/409/422/429); token được gán tự động sau request đăng nhập.
 
 Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
@@ -122,7 +138,7 @@ Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
 ./mvnw test
 ```
 
-78 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
+86 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
 đặt `JWT_SECRET`. Gồm integration test MockMvc cho auth, tour, review, availability, booking,
 destination và security config; cộng unit test rate limit và test race-condition khi huỷ đơn.
 
@@ -136,6 +152,7 @@ destination và security config; cộng unit test rate limit và test race-condi
 ```
 Destination 1─* Tour 1─* Departure          Tour 1─* TourImage
                  │  1─* ItineraryDay        Tour 1─* Review *─1 User
+                 │  *─* User (wishlist, bảng user_wishlist)
                  └──────── 1─* Booking *─1 User   (Booking embeds ContactInfo)
 ```
 
