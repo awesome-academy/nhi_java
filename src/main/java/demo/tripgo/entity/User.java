@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Getter
 @Entity
@@ -36,6 +38,17 @@ public class User {
     @Column(nullable = false, length = 20)
     @Setter
     private UserStatus status = UserStatus.ACTIVE;
+
+    // Wishlist: quan hệ nhiều-nhiều với Tour (hợp đồng 6.6).
+    // Dùng Set nên thêm trùng là no-op ngay ở tầng Java; khoá chính ghép (user_id, tour_id)
+    // do JPA sinh ra chặn thêm một lần nữa ở tầng DB nếu có race.
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "user_wishlist",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "tour_id")
+    )
+    private Set<Tour> wishlist = new LinkedHashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

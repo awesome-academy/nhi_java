@@ -4,11 +4,13 @@ import demo.tripgo.entity.Departure;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface DepartureRepository extends JpaRepository<Departure, Long> {
 
     // Ngày khởi hành trong một khoảng (dùng khi lọc theo tháng), sắp theo ngày tăng dần.
