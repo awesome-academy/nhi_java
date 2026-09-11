@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -83,7 +84,7 @@ class SecurityConfigIntegrationTest {
         mvc.perform(get("/api/v1/test/unlisted")
                 .contextPath("/api/v1").servletPath("/test/unlisted"))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").isNotEmpty());
+            .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
 
     @Test
@@ -93,5 +94,17 @@ class SecurityConfigIntegrationTest {
                 .contextPath("/api/v1").servletPath("/test/unlisted"))
             .andExpect(status().isOk())
             .andExpect(content().string("protected"));
+    }
+
+    // Preflight CORS phải được chấp nhận (không cần auth) và trả header Access-Control-Allow-Origin.
+    @Test
+    void corsPreflightIsAllowed() throws Exception {
+        mvc.perform(options("/api/v1/tours")
+                .contextPath("/api/v1").servletPath("/tours")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "GET"))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Access-Control-Allow-Origin", "*"))
+            .andExpect(header().exists("Access-Control-Allow-Methods"));
     }
 }

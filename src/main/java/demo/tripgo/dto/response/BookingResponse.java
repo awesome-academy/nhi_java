@@ -2,20 +2,17 @@ package demo.tripgo.dto.response;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
-// Đơn đặt tour đầy đủ cho client.
+// Đơn đặt tour trả cho client (POST tạo & GET chi tiết) theo hợp đồng 6.5.
 public record BookingResponse(
     Long id,
     String code,
-    String status,
     Long tourId,
-    String tourTitle,
     LocalDate date,
     int adults,
     int children,
     BigDecimal totalPrice,
-    ContactResponse contact,
-    LocalDateTime createdAt
+    String status,
+    LocalDate createdAt
 ) {
 }

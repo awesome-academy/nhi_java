@@ -120,24 +120,28 @@ class BookingIntegrationTest {
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 2, 1)))
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.message").value("Booking created successfully"))
-            .andExpect(jsonPath("$.booking.code").value(org.hamcrest.Matchers.matchesPattern("TG-\\d{4}-\\d{6}")))
-            .andExpect(jsonPath("$.booking.status").value("CONFIRMED"))
-            .andExpect(jsonPath("$.booking.adults").value(2))
-            .andExpect(jsonPath("$.booking.children").value(1))
+            // Trả thẳng booking object (6.5), status chữ thường, đơn mới = pending.
+            .andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.matchesPattern("TG-\\d{4}-\\d{6}")))
+            .andExpect(jsonPath("$.status").value("pending"))
+            .andExpect(jsonPath("$.tourId").value(tour.getId()))
+            .andExpect(jsonPath("$.adults").value(2))
+            .andExpect(jsonPath("$.children").value(1))
             // 3 khách * 1,000,000 = 3,000,000 (server tự tính).
-            .andExpect(jsonPath("$.booking.totalPrice").value(3000000.0))
-            .andExpect(jsonPath("$.booking.contact.email").value("a@example.com"));
+            .andExpect(jsonPath("$.totalPrice").value(3000000.0));
 
         // Trừ chỗ: 10 - 3 = 7 còn lại.
         assertThat(remainingSeatsOn(date)).isEqualTo(7);
 
-        // Đơn xuất hiện ở GET /bookings của user.
+        // Đơn xuất hiện ở GET /bookings (paginated) với tour gọn { title, thumbnail }.
         mvc.perform(get("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
                 .header("Authorization", token))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.total").value(1))
+            .andExpect(jsonPath("$.page").value(1))
             .andExpect(jsonPath("$.data.length()").value(1))
-            .andExpect(jsonPath("$.data[0].code").value(org.hamcrest.Matchers.startsWith("TG-")));
+            .andExpect(jsonPath("$.data[0].code").value(org.hamcrest.Matchers.startsWith("TG-")))
+            .andExpect(jsonPath("$.data[0].status").value("pending"))
+            .andExpect(jsonPath("$.data[0].tour.title").value("Da Nang Tour"));
     }
 
     @Test
@@ -159,14 +163,27 @@ class BookingIntegrationTest {
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(bad))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422))
-            .andExpect(jsonPath("$.message").value("Validation failed"))
-            .andExpect(jsonPath("$.errors.tourId").isNotEmpty())
-            .andExpect(jsonPath("$.errors.adults").isNotEmpty())
-            .andExpect(jsonPath("$.errors.date").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.message").value("Validation failed"))
+            .andExpect(jsonPath("$.error.fields.tourId").isNotEmpty())
+            .andExpect(jsonPath("$.error.fields.adults").isNotEmpty())
+            .andExpect(jsonPath("$.error.fields.date").isNotEmpty());
 
         // Không tạo đơn nào.
         assertThat(bookings.count()).isZero();
+    }
+
+    @Test
+    void createBookingWithInvalidPhoneReturns422() throws Exception {
+        String bad = """
+            {"tourId":%s,"date":"%s","adults":1,"children":0,
+             "contact":{"fullName":"Nguyen A","email":"a@example.com","phone":"abc123","note":"gọi trước"}}
+            """.formatted(tour.getId(), date);
+        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+                .header("Authorization", tokenFor(saveUser()))
+                .contentType(MediaType.APPLICATION_JSON).content(bad))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.error.fields['contact.phone']").value("Invalid phone number"));
     }
 
     @Test
@@ -175,7 +192,7 @@ class BookingIntegrationTest {
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(body(999999L, date, 1, 0)))
             .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.status").value(404));
+            .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
     }
 
     @Test
@@ -185,7 +202,7 @@ class BookingIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(tour.getId(), date.plusDays(1), 1, 0)))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422));
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"));
     }
 
     @Test
@@ -196,7 +213,7 @@ class BookingIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(tour.getId(), date.plusDays(2), 2, 1))) // xin 3 chỗ
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.status").value(409));
+            .andExpect(jsonPath("$.error.code").value("CONFLICT"));
     }
 
     // ---- GET /bookings/{id} & cross-user ----
@@ -245,8 +262,7 @@ class BookingIntegrationTest {
                 .contextPath("/api/v1").servletPath("/bookings/" + bookingId + "/cancel")
                 .header("Authorization", token))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.message").value("Booking cancelled successfully"))
-            .andExpect(jsonPath("$.booking.status").value("CANCELLED"));
+            .andExpect(jsonPath("$.status").value("cancelled"));
 
         // Hoàn chỗ: về lại 10.
         assertThat(remainingSeatsOn(date)).isEqualTo(10);
@@ -256,7 +272,7 @@ class BookingIntegrationTest {
                 .contextPath("/api/v1").servletPath("/bookings/" + bookingId + "/cancel")
                 .header("Authorization", token))
             .andExpect(status().isConflict())
-            .andExpect(jsonPath("$.status").value(409));
+            .andExpect(jsonPath("$.error.code").value("CONFLICT"));
     }
 
     @Test

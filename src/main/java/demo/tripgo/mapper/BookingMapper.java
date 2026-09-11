@@ -1,41 +1,46 @@
 package demo.tripgo.mapper;
 
-import demo.tripgo.dto.response.BookingActionResponse;
 import demo.tripgo.dto.response.BookingResponse;
-import demo.tripgo.dto.response.ContactResponse;
+import demo.tripgo.dto.response.BookingSummaryResponse;
 import demo.tripgo.entity.Booking;
-import demo.tripgo.entity.ContactInfo;
 import org.springframework.stereotype.Component;
+
+import java.util.Locale;
 
 @Component
 public class BookingMapper {
 
+    // Chi tiết đơn (POST tạo & GET /{id}) theo 6.5: status chữ thường, createdAt chỉ ngày.
     public BookingResponse toResponse(Booking booking) {
         return new BookingResponse(
             booking.getId(),
             booking.getCode(),
-            booking.getStatus().name(),
             booking.getTour().getId(),
-            booking.getTour().getTitle(),
             booking.getDeparture().getDepartureDate(),
             booking.getAdults(),
             booking.getChildren(),
             booking.getTotalPrice(),
-            toContact(booking.getContact()),
-            booking.getCreatedAt()
+            status(booking),
+            booking.getCreatedAt().toLocalDate()
         );
     }
 
-    // Bọc kèm message, giống UserMapper.toRegisterResponse / ReviewMapper.toCreateResponse.
-    public BookingActionResponse toCreateResponse(Booking booking) {
-        return new BookingActionResponse("Booking created successfully", toResponse(booking));
+    // Item danh sách với tour gọn { title, thumbnail }.
+    public BookingSummaryResponse toSummary(Booking booking) {
+        return new BookingSummaryResponse(
+            booking.getId(),
+            booking.getCode(),
+            new BookingSummaryResponse.TourBrief(
+                booking.getTour().getTitle(),
+                booking.getTour().getThumbnailUrl()
+            ),
+            booking.getDeparture().getDepartureDate(),
+            booking.getTotalPrice(),
+            status(booking)
+        );
     }
 
-    public BookingActionResponse toCancelResponse(Booking booking) {
-        return new BookingActionResponse("Booking cancelled successfully", toResponse(booking));
-    }
-
-    private ContactResponse toContact(ContactInfo contact) {
-        return new ContactResponse(contact.getFullName(), contact.getEmail(), contact.getPhone());
+    private String status(Booking booking) {
+        return booking.getStatus().name().toLowerCase(Locale.ROOT);
     }
 }

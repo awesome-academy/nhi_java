@@ -62,7 +62,7 @@ class JwtAuthenticationFilterIntegrationTest {
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isUnauthorized())
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.message").isNotEmpty());
+            .andExpect(jsonPath("$.error.message").isNotEmpty());
 
         // The public login handler still runs and reports the account status.
         mvc.perform(post("/api/v1/auth/login")
@@ -73,7 +73,7 @@ class JwtAuthenticationFilterIntegrationTest {
                     {"email":"%s","password":"password123"}
                     """.formatted(user.getEmail())))
             .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.message").value("User account is not active"));
+            .andExpect(jsonPath("$.error.message").value("User account is not active"));
     }
 
     @ParameterizedTest

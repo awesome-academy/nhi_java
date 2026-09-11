@@ -12,6 +12,7 @@ import demo.tripgo.entity.Tour;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Locale;
 
 @Component
 public class TourMapper {
@@ -22,7 +23,7 @@ public class TourMapper {
             tour.getId(),
             tour.getTitle(),
             toDestination(tour.getDestination()),
-            tour.getCategory(),
+            category(tour),
             tour.getDurationDays(),
             tour.getPrice(),
             tour.getDiscountPrice(),
@@ -44,8 +45,9 @@ public class TourMapper {
         return new TourDetailResponse(
             tour.getId(),
             tour.getTitle(),
+            tour.getSlug(),
             toDestination(tour.getDestination()),
-            tour.getCategory(),
+            category(tour),
             tour.getDurationDays(),
             tour.getPrice(),
             tour.getDiscountPrice(),
@@ -67,6 +69,11 @@ public class TourMapper {
             departure.getTotalSeats(),
             departure.getRemainingSeats()
         );
+    }
+
+    // Category xuất dạng chữ thường theo hợp đồng (beach|mountain|city|trekking|cruise|cultural).
+    private String category(Tour tour) {
+        return tour.getCategory().name().toLowerCase(Locale.ROOT);
     }
 
     private DestinationResponse toDestination(Destination destination) {

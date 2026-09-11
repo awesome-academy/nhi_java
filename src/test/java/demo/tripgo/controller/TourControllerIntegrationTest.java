@@ -76,7 +76,7 @@ class TourControllerIntegrationTest {
         // Trang 1, limit 2, sort giá tăng -> [DN-cheap, DN-mid].
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("destination", "da-nang").param("sort", "price_asc")
-                .param("page", "1").param("limit", "2"))
+                .param("page", "1").param("size", "2"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
             .andExpect(jsonPath("$.page").value(1))
@@ -89,7 +89,7 @@ class TourControllerIntegrationTest {
         // Trang 2 -> [DN-expensive], không lẫn tour Ha Noi.
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("destination", "da-nang").param("sort", "price_asc")
-                .param("page", "2").param("limit", "2"))
+                .param("page", "2").param("size", "2"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(3))
             .andExpect(jsonPath("$.page").value(2))
@@ -168,14 +168,14 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("page", "0"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422))
-            .andExpect(jsonPath("$.errors.page").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.fields.page").isNotEmpty());
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
-                .param("limit", "100"))
+                .param("size", "100"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422))
-            .andExpect(jsonPath("$.errors.limit").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.fields.size").isNotEmpty());
     }
 
     @Test
@@ -183,12 +183,12 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("sort", "cheapest"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400));
+            .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("category", "spaceship"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400));
+            .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }
 
     // ---- GET /tours/{id}: detail ----
@@ -235,9 +235,9 @@ class TourControllerIntegrationTest {
             .andExpect(jsonPath("$.id").value(id))
             .andExpect(jsonPath("$.title").value("Full Da Nang Tour"))
             .andExpect(jsonPath("$.destination.slug").value("da-nang"))
-            .andExpect(jsonPath("$.category").value("BEACH"))
+            .andExpect(jsonPath("$.category").value("beach"))
             .andExpect(jsonPath("$.durationDays").value(4))
-            .andExpect(jsonPath("$.maxGuests").value(15))
+            .andExpect(jsonPath("$.maxGroupSize").value(15))
             .andExpect(jsonPath("$.reviewCount").value(120))
             .andExpect(jsonPath("$.highlights.length()").value(2))
             .andExpect(jsonPath("$.included[0]").value("Hotel"))
@@ -253,8 +253,8 @@ class TourControllerIntegrationTest {
     void detailForUnknownIdReturns404() throws Exception {
         mvc.perform(get("/api/v1/tours/999999").contextPath("/api/v1").servletPath("/tours/999999"))
             .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.status").value(404))
-            .andExpect(jsonPath("$.message").isNotEmpty());
+            .andExpect(jsonPath("$.error.code").value("NOT_FOUND"))
+            .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
 
     @Test
@@ -262,10 +262,10 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours/not-a-number")
                 .contextPath("/api/v1").servletPath("/tours/not-a-number"))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.status").value(400))
-            .andExpect(jsonPath("$.message").value("Parameter 'id' must be of type Long"))
+            .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
+            .andExpect(jsonPath("$.error.message").value("Parameter 'id' must be of type Long"))
             // Không được lộ message nội bộ của Spring.
-            .andExpect(jsonPath("$.message", org.hamcrest.Matchers.not(
+            .andExpect(jsonPath("$.error.message", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
     }
 
@@ -274,9 +274,9 @@ class TourControllerIntegrationTest {
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("minPrice", "abc"))
             .andExpect(status().isUnprocessableEntity())
-            .andExpect(jsonPath("$.status").value(422))
-            .andExpect(jsonPath("$.errors.minPrice").value("must be of type BigDecimal"))
-            .andExpect(jsonPath("$.errors.minPrice", org.hamcrest.Matchers.not(
+            .andExpect(jsonPath("$.error.code").value("UNPROCESSABLE_ENTITY"))
+            .andExpect(jsonPath("$.error.fields.minPrice").value("must be of type BigDecimal"))
+            .andExpect(jsonPath("$.error.fields.minPrice", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
     }
 }
