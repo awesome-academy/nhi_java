@@ -12,10 +12,11 @@ import java.util.Optional;
 @Repository
 public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificationExecutor<Tour> {
 
-    // Fetch join điểm đến + ảnh trong một truy vấn để dựng màn chi tiết, tránh N+1.
+    // Fetch join điểm đến + loại hình + ảnh trong một truy vấn để dựng màn chi tiết, tránh N+1.
     @Query("""
         select t from Tour t
         left join fetch t.destination
+        left join fetch t.category
         left join fetch t.images
         where t.id = :id
         """)

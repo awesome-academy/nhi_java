@@ -3,8 +3,9 @@ package demo.tripgo.controller;
 import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Role;
 import demo.tripgo.entity.Tour;
-import demo.tripgo.entity.TourCategory;
+import demo.tripgo.entity.Category;
 import demo.tripgo.entity.User;
+import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.repository.TourRepository;
 import demo.tripgo.repository.UserRepository;
@@ -35,6 +36,7 @@ class WishlistIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
+    @Autowired CategoryRepository categories;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
@@ -61,7 +63,7 @@ class WishlistIntegrationTest {
         Tour tour = new Tour();
         tour.setTitle(title);
         tour.setDestination(destination);
-        tour.setCategory(TourCategory.BEACH);
+        tour.setCategory(category("beach", "Biển đảo"));
         tour.setDurationDays(3);
         tour.setPrice(new BigDecimal("1000000"));
         tour.setMaxGuests(20);
@@ -235,5 +237,15 @@ class WishlistIntegrationTest {
                 .header("Authorization", tokenFor()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds").isEmpty());
+    }
+
+    // Danh mục nay là bảng (trước là enum): tìm-hoặc-tạo để mỗi test tự chuẩn bị dữ liệu.
+    private Category category(String slug, String name) {
+        return categories.findBySlug(slug).orElseGet(() -> {
+            Category c = new Category();
+            c.setSlug(slug);
+            c.setName(name);
+            return categories.save(c);
+        });
     }
 }

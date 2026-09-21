@@ -6,7 +6,6 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 - Base URL: `http://localhost:8080/api/v1`
 - Swagger UI: `http://localhost:8080/api/v1/swagger-ui.html` (tắt ở profile `prod`)
 - Bộ request mẫu: [`docs/api.http`](docs/api.http)
-- Quy tắc & convention của dự án: [`REQUIREMENTS.md`](REQUIREMENTS.md)
 
 ---
 
@@ -36,7 +35,7 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 | GET | `/tours/{id}/reviews` | public | Đánh giá của tour (phân trang) |
 | POST | `/tours/{id}/reviews` | user **đã đặt tour** | Tạo đánh giá → 201 |
 | GET | `/destinations` | public | Điểm đến + ảnh + số tour |
-| GET | `/categories` | public | Loại hình tour + nhãn tiếng Việt |
+| GET | `/categories` | public | Loại hình tour + nhãn tiếng Việt (bảng `categories`) |
 | POST | `/bookings` | user | Đặt tour → 201 |
 | GET | `/bookings` | user | Đơn của tôi (phân trang) |
 | GET | `/bookings/{id}` | user | Chi tiết đơn của tôi |
@@ -47,7 +46,7 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 
 **Tham số của `GET /tours`:** `q`, `destination` (slug), `category`
 (`beach|mountain|city|trekking|cruise|cultural`), `minPrice`, `maxPrice`, `duration`, `rating`,
-`sort` (`newest|price_asc|price_desc|rating_desc`, mặc định `newest`), `page` (từ 1), `limit`
+`sort` (`newest|price_asc|price_desc|rating`, mặc định `newest`; `rating_desc` là bí danh của `rating`), `page` (từ 1), `limit`
 (mặc định 10, tối đa 50).
 
 **Định dạng response.** Danh sách phân trang trả `{ data, total, page, limit }`, danh sách thường
@@ -114,6 +113,9 @@ Script chạy lại nhiều lần an toàn (xoá sạch dữ liệu tour trướ
 - **55 tour** thuộc **8 điểm đến**, tất cả đều có ảnh, lịch trình và ngày khởi hành
   (riêng *Tĩnh dưỡng Đà Lạt chưa mở chuyến* cố ý để trống, dùng thử case `availability` rỗng)
 - **347 đánh giá** rải trên mọi tour, tour nhiều nhất có 12 — đủ để thử `?page=2&limit=10`
+- **10 đơn đặt tour** (8 `pending`, 2 `cancelled`) trên 10 tour khác nhau, mỗi đơn một tài khoản
+  `seed.*` — dùng để thử luồng F8: chủ đơn đánh giá được (201), người chưa đặt bị chặn (403),
+  và người có đơn **đã huỷ** cũng bị chặn
 - **1 admin + 14 tài khoản người dùng**, mật khẩu là hash BCrypt thật nên đăng nhập được ngay:
 
   | Tài khoản | Mật khẩu | Role |
@@ -138,7 +140,7 @@ Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
 ./mvnw test
 ```
 
-86 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
+94 test chạy trên H2 (chế độ PostgreSQL), profile `test` có sẵn khoá JWT riêng nên **không cần**
 đặt `JWT_SECRET`. Gồm integration test MockMvc cho auth, tour, review, availability, booking,
 destination và security config; cộng unit test rate limit và test race-condition khi huỷ đơn.
 
@@ -150,7 +152,8 @@ destination và security config; cộng unit test rate limit và test race-condi
 **Quan hệ dữ liệu:**
 
 ```
-Destination 1─* Tour 1─* Departure          Tour 1─* TourImage
+Category    1─* Tour                       Tour 1─* TourImage
+Destination 1─* Tour 1─* Departure
                  │  1─* ItineraryDay        Tour 1─* Review *─1 User
                  │  *─* User (wishlist, bảng user_wishlist)
                  └──────── 1─* Booking *─1 User   (Booking embeds ContactInfo)

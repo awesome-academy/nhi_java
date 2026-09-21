@@ -98,7 +98,7 @@ GET {{host}}/tours?destination=da-nang&category=beach
 ### Lọc theo khoảng giá, số ngày, điểm đánh giá tối thiểu
 GET {{host}}/tours?minPrice=1000000&maxPrice=5000000&duration=3&rating=4
 
-### Sắp xếp: newest | price_asc | price_desc | rating_desc
+### Sắp xếp: newest | price_asc | price_desc | rating (bí danh: rating_desc)
 GET {{host}}/tours?sort=price_asc
 
 ### Kết hợp đầy đủ

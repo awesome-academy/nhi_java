@@ -18,7 +18,7 @@ import java.util.List;
     name = "tours",
     indexes = {
         @Index(name = "idx_tour_destination", columnList = "destination_id"),
-        @Index(name = "idx_tour_category", columnList = "category"),
+        @Index(name = "idx_tour_category", columnList = "category_id"),
         @Index(name = "idx_tour_price", columnList = "price"),
         @Index(name = "idx_tour_rating", columnList = "rating_avg"),
         @Index(name = "idx_tour_duration", columnList = "duration_days"),
@@ -42,9 +42,12 @@ public class Tour {
     @JoinColumn(name = "destination_id", nullable = false)
     private Destination destination;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
-    private TourCategory category;
+    // Loại hình tour nay là bảng riêng (trước là enum). LAZY như mọi quan hệ khác;
+    // các truy vấn danh sách phải fetch kèm, xem TourSpecifications.
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    @Setter
+    private Category category;
 
     // Thời lượng tính theo số ngày, dùng cho bộ lọc duration.
     @Column(name = "duration_days", nullable = false)
