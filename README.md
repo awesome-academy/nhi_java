@@ -42,7 +42,7 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 | PATCH | `/bookings/{id}/cancel` | user | Huỷ đơn |
 | GET | `/wishlist` | user | Tour đã lưu của tôi |
 | POST | `/wishlist` | user | Thêm tour vào wishlist |
-| DELETE | `/wishlist/{tourId}` | user | Bỏ tour khỏi wishlist |
+| DELETE | `/wishlist/{tourId}` | user | Bỏ tour khỏi wishlist → `{ message, removed, tourId }` |
 
 **Tham số của `GET /tours`:** `q`, `destination` (slug), `category`
 (`beach|mountain|city|trekking|cruise|cultural`), `minPrice`, `maxPrice`, `duration`, `rating`,

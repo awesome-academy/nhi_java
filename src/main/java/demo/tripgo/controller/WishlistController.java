@@ -1,6 +1,7 @@
 package demo.tripgo.controller;
 
 import demo.tripgo.dto.request.AddWishlistRequest;
+import demo.tripgo.dto.response.RemoveWishlistResponse;
 import demo.tripgo.dto.response.WishlistResponse;
 import demo.tripgo.entity.User;
 import demo.tripgo.security.AuthUtils;
@@ -43,7 +44,7 @@ public class WishlistController {
     }
 
     @DeleteMapping("/{tourId}")
-    public ResponseEntity<WishlistResponse> removeTour(
+    public ResponseEntity<RemoveWishlistResponse> removeTour(
         @AuthenticationPrincipal User user,
         @PathVariable Long tourId
     ) {
