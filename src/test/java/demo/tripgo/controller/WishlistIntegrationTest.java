@@ -110,7 +110,7 @@ class WishlistIntegrationTest {
     }
 
     @Test
-    void addThenGetThenRemoveReturnsCurrentList() throws Exception {
+    void addThenGetThenRemove() throws Exception {
         String token = tokenFor();
 
         mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
@@ -131,8 +131,18 @@ class WishlistIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(2));
 
+        // DELETE báo kết quả xoá, không trả lại danh sách.
         mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
                 .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
+                .header("Authorization", token))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.removed").value(true))
+            .andExpect(jsonPath("$.tourId").value(tourA.getId()))
+            .andExpect(jsonPath("$.message").value("Xoá tour khỏi wishlist thành công"))
+            .andExpect(jsonPath("$.tourIds").doesNotExist());
+
+        // Danh sách sau khi xoá lấy bằng GET.
+        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(1))
@@ -180,7 +190,7 @@ class WishlistIntegrationTest {
                 .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
                 .header("Authorization", tokenB))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.tourIds").isEmpty());
+            .andExpect(jsonPath("$.removed").value(false));
 
         mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
                 .header("Authorization", tokenA))
@@ -229,14 +239,16 @@ class WishlistIntegrationTest {
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
     }
 
-    // DELETE phải idempotent: xoá thứ không có trong wishlist vẫn 200.
+    // DELETE phải idempotent: xoá thứ không có trong wishlist vẫn 200, chỉ khác removed=false.
     @Test
     void removingTourNotInWishlistIsNoOp() throws Exception {
         mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
                 .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
                 .header("Authorization", tokenFor()))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.tourIds").isEmpty());
+            .andExpect(jsonPath("$.removed").value(false))
+            .andExpect(jsonPath("$.tourId").value(tourA.getId()))
+            .andExpect(jsonPath("$.message").value("Tour không có trong wishlist"));
     }
 
     // Danh mục nay là bảng (trước là enum): tìm-hoặc-tạo để mỗi test tự chuẩn bị dữ liệu.

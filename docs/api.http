@@ -375,11 +375,11 @@ Content-Type: application/json
   "tourId": 999999
 }
 
-### Bỏ tour khỏi wishlist → 200
+### Bỏ tour khỏi wishlist → 200 { "message": "Xoá tour khỏi wishlist thành công", "removed": true, "tourId": 1 }
 DELETE {{host}}/wishlist/1
 Authorization: Bearer {{token}}
 
-### Bỏ tour không có trong wishlist → 200 (idempotent)
+### Bỏ tour không có trong wishlist → 200 (idempotent), "removed": false
 DELETE {{host}}/wishlist/1
 Authorization: Bearer {{token}}
 
