@@ -7,10 +7,11 @@ import demo.tripgo.entity.Departure;
 import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Role;
 import demo.tripgo.entity.Tour;
-import demo.tripgo.entity.TourCategory;
+import demo.tripgo.entity.Category;
 import demo.tripgo.entity.User;
 import demo.tripgo.repository.BookingRepository;
 import demo.tripgo.repository.DepartureRepository;
+import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.repository.TourRepository;
 import demo.tripgo.repository.UserRepository;
@@ -39,6 +40,7 @@ class BookingCancelConcurrencyTest {
     @Autowired DepartureRepository departures;
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
+    @Autowired CategoryRepository categories;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
 
@@ -68,7 +70,7 @@ class BookingCancelConcurrencyTest {
         Tour tour = new Tour();
         tour.setTitle("Tour");
         tour.setDestination(d);
-        tour.setCategory(TourCategory.BEACH);
+        tour.setCategory(category("beach", "Biển đảo"));
         tour.setDurationDays(3);
         tour.setPrice(new BigDecimal("100"));
         tour.setMaxGuests(50);
@@ -135,5 +137,15 @@ class BookingCancelConcurrencyTest {
         contact.setPhone("0900000000");
         booking.setContact(contact);
         return bookings.save(booking).getId();
+    }
+
+    // Danh mục nay là bảng (trước là enum): tìm-hoặc-tạo để mỗi test tự chuẩn bị dữ liệu.
+    private Category category(String slug, String name) {
+        return categories.findBySlug(slug).orElseGet(() -> {
+            Category c = new Category();
+            c.setSlug(slug);
+            c.setName(name);
+            return categories.save(c);
+        });
     }
 }

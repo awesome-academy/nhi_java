@@ -9,12 +9,13 @@ import demo.tripgo.dto.response.TourAvailabilityResponse;
 import demo.tripgo.dto.response.TourDetailResponse;
 import demo.tripgo.dto.response.TourSummaryResponse;
 import demo.tripgo.entity.Departure;
+import demo.tripgo.entity.Category;
 import demo.tripgo.entity.Tour;
-import demo.tripgo.entity.TourCategory;
 import demo.tripgo.exception.InvalidRequestParameterException;
 import demo.tripgo.exception.ResourceNotFoundException;
 import demo.tripgo.mapper.TourMapper;
 import demo.tripgo.repository.DepartureRepository;
+import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.TourRepository;
 import demo.tripgo.repository.TourSpecifications;
 import org.springframework.data.domain.Page;
@@ -27,7 +28,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -36,15 +36,18 @@ import java.util.Locale;
 public class TourService {
 
     private final TourRepository tourRepository;
+    private final CategoryRepository categoryRepository;
     private final DepartureRepository departureRepository;
     private final TourMapper tourMapper;
 
     public TourService(
         TourRepository tourRepository,
+        CategoryRepository categoryRepository,
         DepartureRepository departureRepository,
         TourMapper tourMapper
     ) {
         this.tourRepository = tourRepository;
+        this.categoryRepository = categoryRepository;
         this.departureRepository = departureRepository;
         this.tourMapper = tourMapper;
     }
@@ -54,7 +57,7 @@ public class TourService {
         TourFilter filter = new TourFilter(
             request.q(),
             request.destination(),
-            parseCategory(request.category()),
+            normalizeCategorySlug(request.category()),
             request.minPrice(),
             request.maxPrice(),
             request.duration(),
@@ -139,17 +142,18 @@ public class TourService {
         }
     }
 
-    // Chấp nhận category không phân biệt hoa thường; giá trị lạ → 400.
-    private TourCategory parseCategory(String value) {
+    // Chấp nhận category không phân biệt hoa thường; giá trị lạ → 400 (không lặng lẽ trả rỗng).
+    // Danh mục nay nằm trong bảng nên phải hỏi DB thay vì đối chiếu enum.
+    private String normalizeCategorySlug(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
-        try {
-            return TourCategory.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
+        String slug = value.trim().toLowerCase(Locale.ROOT);
+        if (!categoryRepository.existsBySlug(slug)) {
             throw new InvalidRequestParameterException(
                 "Loại tour không hợp lệ: " + value + ". Cho phép: "
-                    + Arrays.stream(TourCategory.values()).map(TourCategory::getSlug).toList());
+                    + categoryRepository.findAllByOrderByIdAsc().stream().map(Category::getSlug).toList());
         }
+        return slug;
     }
 }

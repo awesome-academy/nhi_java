@@ -30,6 +30,11 @@ public final class TourSpecifications {
             Join<?, ?> destination = isCount
                 ? root.join("destination", JoinType.INNER)
                 : (Join<?, ?>) root.fetch("destination", JoinType.INNER);
+            // category cũng NOT NULL và cũng được TourMapper đọc (lấy slug) -> phải fetch y hệt
+            // destination, nếu không mỗi tour sẽ sinh thêm một truy vấn (N+1).
+            Join<?, ?> category = isCount
+                ? root.join("category", JoinType.INNER)
+                : (Join<?, ?>) root.fetch("category", JoinType.INNER);
 
             List<Predicate> predicates = new ArrayList<>();
 
@@ -45,8 +50,8 @@ public final class TourSpecifications {
             if (hasText(filter.destination())) {
                 predicates.add(cb.equal(destination.get("slug"), filter.destination().trim()));
             }
-            if (filter.category() != null) {
-                predicates.add(cb.equal(root.get("category"), filter.category()));
+            if (hasText(filter.categorySlug())) {
+                predicates.add(cb.equal(category.get("slug"), filter.categorySlug().trim()));
             }
             if (filter.minPrice() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("price"), filter.minPrice()));

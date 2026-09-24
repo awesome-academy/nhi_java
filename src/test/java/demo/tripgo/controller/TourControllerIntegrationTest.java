@@ -3,8 +3,9 @@ package demo.tripgo.controller;
 import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.ItineraryDay;
 import demo.tripgo.entity.Tour;
-import demo.tripgo.entity.TourCategory;
+import demo.tripgo.entity.Category;
 import demo.tripgo.entity.TourImage;
+import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.repository.TourRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,7 @@ class TourControllerIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
+    @Autowired CategoryRepository categories;
 
     private Destination daNang;
     private Destination haNoi;
@@ -48,7 +50,7 @@ class TourControllerIntegrationTest {
         return destinations.save(d);
     }
 
-    private Tour saveTour(String title, Destination destination, TourCategory category,
+    private Tour saveTour(String title, Destination destination, Category category,
                           int durationDays, String price, double rating) {
         Tour tour = new Tour();
         tour.setTitle(title);
@@ -68,10 +70,10 @@ class TourControllerIntegrationTest {
 
     @Test
     void filtersByDestinationSortsByPriceAscAndPaginates() throws Exception {
-        saveTour("DN-cheap", daNang, TourCategory.BEACH, 3, "100", 4.0);
-        saveTour("DN-mid", daNang, TourCategory.BEACH, 3, "200", 4.5);
-        saveTour("DN-expensive", daNang, TourCategory.BEACH, 3, "300", 3.0);
-        saveTour("HN-noise", haNoi, TourCategory.CITY, 2, "150", 5.0);
+        saveTour("DN-cheap", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+        saveTour("DN-mid", daNang, category("beach", "Biển đảo"), 3, "200", 4.5);
+        saveTour("DN-expensive", daNang, category("beach", "Biển đảo"), 3, "300", 3.0);
+        saveTour("HN-noise", haNoi, category("city", "Thành phố"), 2, "150", 5.0);
 
         // Trang 1, limit 2, sort giá tăng -> [DN-cheap, DN-mid].
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
@@ -97,11 +99,25 @@ class TourControllerIntegrationTest {
             .andExpect(jsonPath("$.data[0].title").value("DN-expensive"));
     }
 
+    // Hợp đồng 6.3 đặt tên là "rating"; "rating_desc" giữ làm bí danh tương thích ngược.
+    @Test
+    void sortRatingAndRatingDescAreEquivalent() throws Exception {
+        saveTour("low", daNang, category("beach", "Biển đảo"), 3, "100", 3.0);
+        saveTour("high", daNang, category("beach", "Biển đảo"), 3, "100", 4.9);
+
+        for (String value : new String[]{"rating", "rating_desc"}) {
+            mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+                    .param("sort", value))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].title").value("high"));
+        }
+    }
+
     @Test
     void sortByRatingDescReturnsHighestRatedFirst() throws Exception {
-        saveTour("low", daNang, TourCategory.BEACH, 3, "100", 3.0);
-        saveTour("high", daNang, TourCategory.BEACH, 3, "100", 4.9);
-        saveTour("mid", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("low", daNang, category("beach", "Biển đảo"), 3, "100", 3.0);
+        saveTour("high", daNang, category("beach", "Biển đảo"), 3, "100", 4.9);
+        saveTour("mid", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("sort", "rating_desc"))
@@ -113,9 +129,9 @@ class TourControllerIntegrationTest {
 
     @Test
     void combinesCategoryPriceDurationRatingAndKeywordFilters() throws Exception {
-        saveTour("Beach getaway", daNang, TourCategory.BEACH, 3, "500", 4.5);
-        saveTour("Beach budget", daNang, TourCategory.BEACH, 5, "150", 4.5);
-        saveTour("Mountain trek", daNang, TourCategory.MOUNTAIN, 3, "500", 4.5);
+        saveTour("Beach getaway", daNang, category("beach", "Biển đảo"), 3, "500", 4.5);
+        saveTour("Beach budget", daNang, category("beach", "Biển đảo"), 5, "150", 4.5);
+        saveTour("Mountain trek", daNang, category("mountain", "Núi rừng"), 3, "500", 4.5);
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("q", "beach")
@@ -131,10 +147,10 @@ class TourControllerIntegrationTest {
 
     @Test
     void keywordTreatsUnderscoreAndPercentAsLiteralNotWildcard() throws Exception {
-        saveTour("A_B Special Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
-        saveTour("AXB Unrelated Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
-        saveTour("50% Off Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
-        saveTour("50 nights Tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("A_B Special Tour", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+        saveTour("AXB Unrelated Tour", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+        saveTour("50% Off Tour", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+        saveTour("50 nights Tour", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
 
         // "_" phải là ký tự literal: chỉ khớp "A_B ...", không khớp "AXB ...".
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
@@ -153,7 +169,7 @@ class TourControllerIntegrationTest {
 
     @Test
     void emptyResultReturnsEmptyDataAndZeroTotal() throws Exception {
-        saveTour("only-tour", daNang, TourCategory.BEACH, 3, "100", 4.0);
+        saveTour("only-tour", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
 
         mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
                 .param("destination", "nowhere"))
@@ -198,7 +214,7 @@ class TourControllerIntegrationTest {
         Tour tour = new Tour();
         tour.setTitle("Full Da Nang Tour");
         tour.setDestination(daNang);
-        tour.setCategory(TourCategory.BEACH);
+        tour.setCategory(category("beach", "Biển đảo"));
         tour.setDurationDays(4);
         tour.setPrice(new BigDecimal("999.99"));
         tour.setDiscountPrice(new BigDecimal("799.99"));
@@ -259,7 +275,7 @@ class TourControllerIntegrationTest {
 
     @Test
     void detailBySlugReturnsSameTourAsById() throws Exception {
-        Tour tour = saveTour("Slug Tour", daNang, TourCategory.BEACH, 3, "1000000", 4.0);
+        Tour tour = saveTour("Slug Tour", daNang, category("beach", "Biển đảo"), 3, "1000000", 4.0);
         tour.setSlug("slug-tour-abc");
         Long id = tours.save(tour).getId();
 
@@ -295,7 +311,7 @@ class TourControllerIntegrationTest {
                 .contextPath("/api/v1").servletPath("/tours/not-a-number/availability"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"))
-            .andExpect(jsonPath("$.error.message").value("Tham số 'id' phải thuộc kiểu Long"))
+            .andExpect(jsonPath("$.error.message").value("Tham số 'id' phải là số nguyên"))
             // Không được lộ message nội bộ của Spring.
             .andExpect(jsonPath("$.error.message", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
@@ -307,8 +323,18 @@ class TourControllerIntegrationTest {
                 .param("minPrice", "abc"))
             .andExpect(status().isUnprocessableEntity())
             .andExpect(jsonPath("$.error.code").value("VALIDATION"))
-            .andExpect(jsonPath("$.error.fields.minPrice").value("phải thuộc kiểu BigDecimal"))
+            .andExpect(jsonPath("$.error.fields.minPrice").value("minPrice phải là số"))
             .andExpect(jsonPath("$.error.fields.minPrice", org.hamcrest.Matchers.not(
                 org.hamcrest.Matchers.containsString("Failed to convert"))));
+    }
+
+    // Danh mục nay là bảng (trước là enum): tìm-hoặc-tạo để mỗi test tự chuẩn bị dữ liệu.
+    private Category category(String slug, String name) {
+        return categories.findBySlug(slug).orElseGet(() -> {
+            Category c = new Category();
+            c.setSlug(slug);
+            c.setName(name);
+            return categories.save(c);
+        });
     }
 }

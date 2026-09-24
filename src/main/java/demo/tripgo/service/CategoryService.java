@@ -2,19 +2,27 @@ package demo.tripgo.service;
 
 import demo.tripgo.dto.response.CategoryResponse;
 import demo.tripgo.dto.response.ListResponse;
-import demo.tripgo.entity.TourCategory;
+import demo.tripgo.mapper.CategoryMapper;
+import demo.tripgo.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Arrays;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional(readOnly = true)
 public class CategoryService {
 
-    // Dữ liệu tĩnh lấy thẳng từ enum nên không cần repository/transaction.
+    private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
+
+    public CategoryService(CategoryRepository categoryRepository, CategoryMapper categoryMapper) {
+        this.categoryRepository = categoryRepository;
+        this.categoryMapper = categoryMapper;
+    }
+
     public ListResponse<CategoryResponse> listCategories() {
         return ListResponse.of(
-            Arrays.stream(TourCategory.values())
-                .map(category -> new CategoryResponse(category.getSlug(), category.getDisplayName()))
+            categoryRepository.findAllByOrderByIdAsc().stream()
+                .map(categoryMapper::toResponse)
                 .toList()
         );
     }

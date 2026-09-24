@@ -38,4 +38,9 @@ build/
 !.env.example
 
 REQUIREMENTS.md
-docs/
+
+# Bỏ qua thư mục docs, TRỪ bộ request mẫu (một trong các hạng mục bàn giao).
+# Phải là docs/* chứ không phải docs/: Git không duyệt vào thư mục đã bị loại trừ,
+# nên !docs/api.http sẽ không có tác dụng nếu ignore cả thư mục.
+docs/*
+!docs/api.http

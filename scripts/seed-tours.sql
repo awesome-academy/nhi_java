@@ -6,8 +6,18 @@
 -- Gỡ constraint cũ để tránh lỗi "bookings_status_check" trên DB dev đã tồn tại từ trước (idempotent).
 ALTER TABLE IF EXISTS bookings DROP CONSTRAINT IF EXISTS bookings_status_check;
 
-TRUNCATE reviews, tour_departures, tour_images, tour_itinerary_days, tour_highlights, tour_included,
-    tour_excluded, tours, destinations RESTART IDENTITY CASCADE;
+TRUNCATE bookings, reviews, tour_departures, tour_images, tour_itinerary_days, tour_highlights, tour_included,
+    tour_excluded, tours, destinations, categories RESTART IDENTITY CASCADE;
+
+-- Loại hình tour: trước đây là enum trong code, nay là bảng để sửa được ở tầng dữ liệu.
+-- slug là thứ client gửi lên (?category=beach), name là nhãn hiển thị.
+INSERT INTO categories (slug, name) VALUES
+    ('beach',    'Biển đảo'),
+    ('mountain', 'Núi rừng'),
+    ('city',     'Thành phố'),
+    ('trekking', 'Trekking'),
+    ('cruise',   'Du thuyền'),
+    ('cultural', 'Văn hoá');
 
 -- Tên hiển thị có dấu; slug giữ dạng không dấu vì đó là thứ client gửi lên khi lọc (?destination=da-nang).
 INSERT INTO destinations (name, slug, image) VALUES
@@ -21,23 +31,23 @@ INSERT INTO destinations (name, slug, image) VALUES
     ('Huế',       'hue',       'https://img/diem-den/hue.jpg');
 
 -- Nhiều tour Đà Nẵng với giá/đánh giá/thời lượng khác nhau để thử lọc + sắp xếp + phân trang.
-INSERT INTO tours (title, destination_id, category, duration_days, price, discount_price,
+INSERT INTO tours (title, destination_id, category_id, duration_days, price, discount_price,
                    rating_avg, review_count, max_guests, thumbnail_url, description, created_at, updated_at)
 VALUES
     ('Nghỉ dưỡng biển Đà Nẵng', (SELECT id FROM destinations WHERE slug='da-nang'),
-     'BEACH', 3, 2500000, 1990000, 4.8, 120, 20, 'https://img/dn-beach.jpg',
+     (SELECT id FROM categories WHERE slug='beach'), 3, 2500000, 1990000, 4.8, 120, 20, 'https://img/dn-beach.jpg',
      'Thư giãn tại bãi biển Mỹ Khê, ngắm bình minh và thưởng thức hải sản tươi sống.', now(), now()),
     ('Khám phá thành phố Đà Nẵng', (SELECT id FROM destinations WHERE slug='da-nang'),
-     'CITY', 2, 1500000, NULL, 4.2, 45, 15, 'https://img/dn-city.jpg',
+     (SELECT id FROM categories WHERE slug='city'), 2, 1500000, NULL, 4.2, 45, 15, 'https://img/dn-city.jpg',
      'Dạo Cầu Rồng về đêm và thưởng thức ẩm thực đường phố miền Trung.', now(), now()),
     ('Trekking Bà Nà Hills', (SELECT id FROM destinations WHERE slug='da-nang'),
-     'TREKKING', 4, 3200000, 2990000, 4.6, 88, 12, 'https://img/dn-bana.jpg',
+     (SELECT id FROM categories WHERE slug='trekking'), 4, 3200000, 2990000, 4.6, 88, 12, 'https://img/dn-bana.jpg',
      'Chinh phục Cầu Vàng và cung đường trekking giữa rừng già Bà Nà.', now(), now()),
     ('Nghỉ dưỡng núi Sa Pa', (SELECT id FROM destinations WHERE slug='sa-pa'),
-     'MOUNTAIN', 5, 4200000, NULL, 4.9, 210, 10, 'https://img/sapa.jpg',
+     (SELECT id FROM categories WHERE slug='mountain'), 5, 4200000, NULL, 4.9, 210, 10, 'https://img/sapa.jpg',
      'Đỉnh Fansipan hùng vĩ và những thửa ruộng bậc thang mùa lúa chín.', now(), now()),
     ('Dạo bộ phố cổ Hà Nội', (SELECT id FROM destinations WHERE slug='ha-noi'),
-     'CITY', 1, 800000, NULL, 4.0, 30, 25, 'https://img/hanoi.jpg',
+     (SELECT id FROM categories WHERE slug='city'), 1, 800000, NULL, 4.0, 30, 25, 'https://img/hanoi.jpg',
      'Tour đi bộ khám phá 36 phố phường và văn hoá phố cổ Hà Nội.', now(), now());
 
 -- Ngày khởi hành để thử GET /tours/{id}/availability (ngày tương đối so với hôm nay).
@@ -53,30 +63,30 @@ INSERT INTO tour_departures (tour_id, departure_date, total_seats, booked_seats)
 
 -- 1) Tour edge-case: ký tự wildcard _ và % NẰM TRONG tiêu đề (test escape LIKE) — phải giữ nguyên,
 --    đủ 6 category, biên giá (1tr/5tr), rating cao/thấp/đúng-biên-4.5, có/không discount.
-INSERT INTO tours (title, destination_id, category, duration_days, price, discount_price,
+INSERT INTO tours (title, destination_id, category_id, duration_days, price, discount_price,
                    rating_avg, review_count, max_guests, thumbnail_url, description, created_at, updated_at)
 VALUES
-    ('Beach_Villa Hội An',              (SELECT id FROM destinations WHERE slug='hoi-an'),   'BEACH',    3, 2200000, 1990000, 4.7, 60,  18, 'https://img/e1.jpg', 'Tiêu đề chứa dấu gạch dưới để kiểm tra escape LIKE.', now(), now()),
-    ('Dive_Snorkel Nha Trang',          (SELECT id FROM destinations WHERE slug='nha-trang'),'BEACH',    2, 1800000, NULL,    4.3, 40,  16, 'https://img/e2.jpg', 'Một tiêu đề chứa gạch dưới khác.', now(), now()),
-    ('Giảm 50% tour hè Phú Quốc',       (SELECT id FROM destinations WHERE slug='phu-quoc'), 'BEACH',    4, 3000000, 1500000, 4.6, 75,  22, 'https://img/e3.jpg', 'Tiêu đề chứa dấu phần trăm để kiểm tra escape LIKE.', now(), now()),
-    ('100% thiên nhiên hoang dã Sa Pa', (SELECT id FROM destinations WHERE slug='sa-pa'),    'TREKKING', 6, 3500000, NULL,    4.9, 150, 12, 'https://img/e4.jpg', 'Một tiêu đề chứa phần trăm khác.', now(), now()),
-    ('Du thuyền Hạ Long cao cấp',       (SELECT id FROM destinations WHERE slug='ha-noi'),   'CRUISE',   2, 4800000, 4200000, 4.8, 95,  30, 'https://img/e5.jpg', 'Mẫu cho category CRUISE.', now(), now()),
-    ('Văn hoá cung đình Huế',           (SELECT id FROM destinations WHERE slug='hue'),      'CULTURAL', 2, 1200000, NULL,    4.1, 33,  25, 'https://img/e6.jpg', 'Mẫu cho category CULTURAL.', now(), now()),
-    ('Tour trong ngày tiết kiệm Đà Lạt',(SELECT id FROM destinations WHERE slug='da-lat'),   'CITY',     1, 1000000, NULL,    3.5, 12,  20, 'https://img/e7.jpg', 'Biên giá 1.000.000 và thời lượng 1 ngày.', now(), now()),
-    ('Hành trình Fansipan dài ngày',    (SELECT id FROM destinations WHERE slug='sa-pa'),    'MOUNTAIN',14, 5000000, NULL,    5.0, 200, 10, 'https://img/e8.jpg', 'Biên giá 5.000.000, thời lượng dài, đánh giá 5.0.', now(), now()),
-    ('Viên ngọc ẩn Hội An',             (SELECT id FROM destinations WHERE slug='hoi-an'),   'CULTURAL', 3, 2600000, NULL,    5.0, 300, 15, 'https://img/e9.jpg', 'Đánh giá cao nhất.', now(), now()),
-    ('Tour mẫu đánh giá thấp Hà Nội',   (SELECT id FROM destinations WHERE slug='ha-noi'),   'CITY',     2, 900000,  NULL,    2.0, 5,   25, 'https://img/e10.jpg','Mẫu đánh giá thấp.', now(), now()),
-    ('Tĩnh dưỡng Đà Lạt chưa mở chuyến',(SELECT id FROM destinations WHERE slug='da-lat'),   'MOUNTAIN', 3, 2100000, NULL,    4.4, 20,  14, 'https://img/e11.jpg','Cố ý không seed ngày khởi hành -> availability rỗng.', now(), now()),
-    ('Lễ hội hoa Đà Lạt',               (SELECT id FROM destinations WHERE slug='da-lat'),   'CULTURAL', 2, 1600000, 1400000, 4.5, 55,  28, 'https://img/e12.jpg','Đánh giá đúng biên 4.5.', now(), now());
+    ('Beach_Villa Hội An',              (SELECT id FROM destinations WHERE slug='hoi-an'),   (SELECT id FROM categories WHERE slug='beach'),    3, 2200000, 1990000, 4.7, 60,  18, 'https://img/e1.jpg', 'Tiêu đề chứa dấu gạch dưới để kiểm tra escape LIKE.', now(), now()),
+    ('Dive_Snorkel Nha Trang',          (SELECT id FROM destinations WHERE slug='nha-trang'),(SELECT id FROM categories WHERE slug='beach'),    2, 1800000, NULL,    4.3, 40,  16, 'https://img/e2.jpg', 'Một tiêu đề chứa gạch dưới khác.', now(), now()),
+    ('Giảm 50% tour hè Phú Quốc',       (SELECT id FROM destinations WHERE slug='phu-quoc'), (SELECT id FROM categories WHERE slug='beach'),    4, 3000000, 1500000, 4.6, 75,  22, 'https://img/e3.jpg', 'Tiêu đề chứa dấu phần trăm để kiểm tra escape LIKE.', now(), now()),
+    ('100% thiên nhiên hoang dã Sa Pa', (SELECT id FROM destinations WHERE slug='sa-pa'),    (SELECT id FROM categories WHERE slug='trekking'), 6, 3500000, NULL,    4.9, 150, 12, 'https://img/e4.jpg', 'Một tiêu đề chứa phần trăm khác.', now(), now()),
+    ('Du thuyền Hạ Long cao cấp',       (SELECT id FROM destinations WHERE slug='ha-noi'),   (SELECT id FROM categories WHERE slug='cruise'),   2, 4800000, 4200000, 4.8, 95,  30, 'https://img/e5.jpg', 'Mẫu cho category CRUISE.', now(), now()),
+    ('Văn hoá cung đình Huế',           (SELECT id FROM destinations WHERE slug='hue'),      (SELECT id FROM categories WHERE slug='cultural'), 2, 1200000, NULL,    4.1, 33,  25, 'https://img/e6.jpg', 'Mẫu cho category CULTURAL.', now(), now()),
+    ('Tour trong ngày tiết kiệm Đà Lạt',(SELECT id FROM destinations WHERE slug='da-lat'),   (SELECT id FROM categories WHERE slug='city'),     1, 1000000, NULL,    3.5, 12,  20, 'https://img/e7.jpg', 'Biên giá 1.000.000 và thời lượng 1 ngày.', now(), now()),
+    ('Hành trình Fansipan dài ngày',    (SELECT id FROM destinations WHERE slug='sa-pa'),    (SELECT id FROM categories WHERE slug='mountain'),14, 5000000, NULL,    5.0, 200, 10, 'https://img/e8.jpg', 'Biên giá 5.000.000, thời lượng dài, đánh giá 5.0.', now(), now()),
+    ('Viên ngọc ẩn Hội An',             (SELECT id FROM destinations WHERE slug='hoi-an'),   (SELECT id FROM categories WHERE slug='cultural'), 3, 2600000, NULL,    5.0, 300, 15, 'https://img/e9.jpg', 'Đánh giá cao nhất.', now(), now()),
+    ('Tour mẫu đánh giá thấp Hà Nội',   (SELECT id FROM destinations WHERE slug='ha-noi'),   (SELECT id FROM categories WHERE slug='city'),     2, 900000,  NULL,    2.0, 5,   25, 'https://img/e10.jpg','Mẫu đánh giá thấp.', now(), now()),
+    ('Tĩnh dưỡng Đà Lạt chưa mở chuyến',(SELECT id FROM destinations WHERE slug='da-lat'),   (SELECT id FROM categories WHERE slug='mountain'), 3, 2100000, NULL,    4.4, 20,  14, 'https://img/e11.jpg','Cố ý không seed ngày khởi hành -> availability rỗng.', now(), now()),
+    ('Lễ hội hoa Đà Lạt',               (SELECT id FROM destinations WHERE slug='da-lat'),   (SELECT id FROM categories WHERE slug='cultural'), 2, 1600000, 1400000, 4.5, 55,  28, 'https://img/e12.jpg','Đánh giá đúng biên 4.5.', now(), now());
 
 -- 2) Bulk 38 tour trải đều category/điểm đến/giá/thời lượng/rating để test lọc + sắp xếp + phân trang.
 --    created_at lệch nhau để sort=newest có ý nghĩa.
-INSERT INTO tours (title, destination_id, category, duration_days, price, discount_price,
+INSERT INTO tours (title, destination_id, category_id, duration_days, price, discount_price,
                    rating_avg, review_count, max_guests, thumbnail_url, description, created_at, updated_at)
 SELECT
     'Gói khám phá ' || g,
     (SELECT id FROM destinations OFFSET (g % (SELECT count(*) FROM destinations)) LIMIT 1),
-    (ARRAY['BEACH','MOUNTAIN','CITY','TREKKING','CRUISE','CULTURAL'])[1 + (g % 6)],
+    (SELECT id FROM categories WHERE slug = (ARRAY['beach','mountain','city','trekking','cruise','cultural'])[1 + (g % 6)]),
     1 + (g % 12),
     500000 + (g % 19) * 250000,
     CASE WHEN g % 3 = 0 THEN 500000 + (g % 19) * 250000 - 150000 ELSE NULL END,
@@ -103,21 +113,140 @@ SELECT t.id, CURRENT_DATE + (g * 7), 25, (g * 5)
 FROM tours t, generate_series(1, 3) AS g
 WHERE t.title LIKE 'Gói khám phá %' AND (t.id % 4 = 0);
 
--- 4) User seed (chỉ để gán tên người đánh giá; mật khẩu là placeholder, không dùng để đăng nhập)
---    và review thật cho một tour, kèm đồng bộ rating denormalized.
+-- Tài khoản của phiên bản seed cũ: hash mật khẩu là placeholder nên không đăng nhập được.
+-- Xoá để mọi tài khoản seed.* còn lại đều dùng được password123.
+DELETE FROM users WHERE email IN ('seed.alice@example.com', 'seed.bob@example.com');
+
+-- 4) Tài khoản seed. Mật khẩu là hash BCrypt THẬT nên đăng nhập được ngay:
+--    admin@tripgo.vn / admin123   (ROLE_ADMIN)
+--    các tài khoản còn lại / password123
 INSERT INTO users (full_name, email, password, role, status, created_at, updated_at) VALUES
-    ('Nguyễn Thị Mai', 'seed.mai@example.com',  '$2a$10$placeholderplaceholderplaceholderplaceholderph', 'USER', 'ACTIVE', now(), now()),
-    ('Trần Văn Bình',  'seed.binh@example.com', '$2a$10$placeholderplaceholderplaceholderplaceholderph', 'USER', 'ACTIVE', now(), now())
+    ('Quản trị viên',  'admin@tripgo.vn',       '$2a$10$E.Kph5bgeIqFALBWdhL7veYOlE1rz8esGNYI4efb.c0riBI/MdQI6', 'ADMIN', 'ACTIVE', now(), now()),
+    ('Nguyễn Thị Mai', 'seed.mai@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Trần Văn Bình',  'seed.binh@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Lê Thu Hà',      'seed.ha@example.com',   '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Phạm Quốc Anh',  'seed.anh@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Vũ Minh Châu',   'seed.chau@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Đỗ Hoàng Long',  'seed.long@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Bùi Khánh Linh', 'seed.linh@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Ngô Gia Bảo',    'seed.bao@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Đặng Thuỳ Dung',  'seed.dung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Hoàng Nhật Nam',  'seed.nam@example.com',  '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Trịnh Bảo Ngọc',  'seed.ngoc@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Lý Thanh Tùng',   'seed.tung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Mai Phương Thảo', 'seed.thao@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now()),
+    ('Chu Việt Hưng',   'seed.hung@example.com', '$2a$10$./3AyEJcXv2btlD9OtnwgOCu79.WaUB0GMENRue/fYsBbgrqSrtBO',  'USER',  'ACTIVE', now(), now())
 ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO reviews (tour_id, user_id, rating, comment, created_at) VALUES
-    ((SELECT id FROM tours WHERE title='Nghỉ dưỡng núi Sa Pa'),
-     (SELECT id FROM users WHERE email='seed.mai@example.com'),  5, 'Cảnh đẹp ngoài sức tưởng tượng, hướng dẫn viên nhiệt tình.', now() - interval '2 days'),
-    ((SELECT id FROM tours WHERE title='Nghỉ dưỡng núi Sa Pa'),
-     (SELECT id FROM users WHERE email='seed.binh@example.com'), 4, 'Chuyến đi đáng giá nhưng buổi tối hơi lạnh.', now() - interval '1 day');
+-- Đánh giá: rải trên nhiều tour, đủ nhiều để test phân trang (?page=2&limit=10).
+-- Số review mỗi tour = 1 + (id % 12) -> có tour tới 12 đánh giá, đủ để ?page=2&limit=10 ra 2 trang.
+-- Điểm sinh quanh rating_avg ĐÃ SEED của tour (±1 theo người) nên sau khi đồng bộ lại,
+-- phân hoá đánh giá vẫn giữ nguyên: tour cố ý 2.0 vẫn thấp, tour 5.0 vẫn cao, biên 4.5 vẫn ~4.5.
+-- Nhờ vậy lọc ?rating= và sort=rating_desc vẫn có ý nghĩa.
+-- Unique (tour_id, user_id) được tôn trọng vì mỗi người chỉ xuất hiện một lần cho một tour.
+INSERT INTO reviews (tour_id, user_id, rating, comment, created_at)
+SELECT t.id,
+       u.id,
+       greatest(1, least(5, round(t.rating_avg)::int + ((u.id % 3) - 1))),
+       (ARRAY[
+          'Chuyến đi đúng như mô tả, hướng dẫn viên thân thiện.',
+          'Lịch trình hợp lý, ăn uống ổn.',
+          'Cảnh đẹp, sẽ quay lại lần nữa.',
+          'Giá hơi cao so với chất lượng phòng.',
+          'Di chuyển khá nhiều nhưng bù lại nhiều điểm tham quan.',
+          'Hướng dẫn viên nhiệt tình, đáng tiền.'
+        ])[1 + ((t.id + u.id) % 6)],
+       now() - (((t.id + u.id) % 60) || ' days')::interval
+FROM tours t
+JOIN LATERAL (
+    SELECT id, row_number() OVER (ORDER BY id) AS rn
+    FROM users WHERE role = 'USER'
+) u ON u.rn <= 1 + (t.id % 12)
+WHERE NOT EXISTS (
+    SELECT 1 FROM reviews r WHERE r.tour_id = t.id AND r.user_id = u.id
+);
 
--- rating_avg/review_count phải khớp với review thật vừa seed (avg(5,4)=4.5, count=2).
-UPDATE tours SET rating_avg = 4.5, review_count = 2 WHERE title = 'Nghỉ dưỡng núi Sa Pa';
+-- rating_avg/review_count là dữ liệu denormalized -> phải khớp bảng reviews, nếu không
+-- màn chi tiết sẽ hiện "3 đánh giá" trong khi danh sách đánh giá rỗng.
+UPDATE tours t
+SET rating_avg   = coalesce(agg.avg_rating, 0),
+    review_count = coalesce(agg.cnt, 0)
+FROM (SELECT t2.id,
+             round(avg(r.rating)::numeric, 1) AS avg_rating,
+             count(r.id) AS cnt
+      FROM tours t2 LEFT JOIN reviews r ON r.tour_id = t2.id
+      GROUP BY t2.id) agg
+WHERE t.id = agg.id;
+
+-- Ngày khởi hành cho những tour chưa có, trừ tour cố ý để trống (test availability rỗng).
+-- 3 mốc tương lai, số chỗ đã đặt khác nhau để có cả chuyến còn nhiều, còn ít và hết chỗ.
+INSERT INTO tour_departures (tour_id, departure_date, total_seats, booked_seats)
+SELECT t.id,
+       CURRENT_DATE + ((g * 9) + (t.id % 5))::int,
+       (20 + (t.id % 3) * 5)::int,
+       (CASE WHEN g = 3 AND t.id % 7 = 0 THEN 20 + (t.id % 3) * 5   -- thỉnh thoảng có chuyến hết chỗ
+             ELSE (g * 4 + (t.id % 6)) END)::int
+FROM tours t, generate_series(1, 3) AS g
+WHERE t.title <> 'Tĩnh dưỡng Đà Lạt chưa mở chuyến'
+  AND NOT EXISTS (SELECT 1 FROM tour_departures d WHERE d.tour_id = t.id);
+
+-- Đơn đặt tour mẫu (10) để test luồng F8: chỉ người ĐÃ ĐẶT tour mới được đánh giá.
+-- Ba ràng buộc khi chọn:
+--   1. Chỉ dùng tài khoản seed.* vì đó là những tài khoản biết mật khẩu (password123),
+--      demo mới đăng nhập được bằng chính chủ đơn.
+--   2. Cặp (user, tour) phải CHƯA có đánh giá, để POST review trả 201 chứ không phải 409.
+--   3. Mỗi tour một đơn (DISTINCT ON) -> mỗi đơn rơi vào một chuyến khác nhau, tránh cộng dồn
+--      chỗ trên cùng một departure rồi vượt quá total_seats.
+WITH nguoi_dung AS (
+    SELECT id, full_name, email,
+           row_number() OVER (ORDER BY id) AS urn,
+           count(*) OVER () AS tong
+    FROM users WHERE role = 'USER' AND email LIKE 'seed.%'
+),
+tour_co_cho AS (
+    SELECT t.id AS tour_id,
+           coalesce(t.discount_price, t.price) AS don_gia,
+           row_number() OVER (ORDER BY t.id) AS trn,
+           (SELECT d.id FROM tour_departures d
+             WHERE d.tour_id = t.id
+               AND d.departure_date >= CURRENT_DATE
+               AND d.total_seats - d.booked_seats >= 2
+             ORDER BY d.departure_date
+             LIMIT 1) AS departure_id
+    FROM tours t
+),
+chon AS (
+    -- Ghép luân phiên tour thứ n với người dùng thứ (n mod số người) -> đơn trải đều nhiều tài khoản.
+    SELECT tc.tour_id, tc.departure_id, tc.don_gia, nd.id AS user_id, nd.full_name, nd.email,
+           row_number() OVER (ORDER BY tc.tour_id) AS rn
+    FROM tour_co_cho tc
+    JOIN nguoi_dung nd ON nd.urn = ((tc.trn - 1) % nd.tong) + 1
+    WHERE tc.departure_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.tour_id = tc.tour_id AND r.user_id = nd.id)
+)
+INSERT INTO bookings (user_id, tour_id, departure_id, adults, children, total_price, status,
+                      contact_full_name, contact_email, contact_phone, contact_note,
+                      created_at, updated_at)
+SELECT user_id, tour_id, departure_id, 2, 0, don_gia * 2,
+       -- Hai đơn đã huỷ: dùng để kiểm tra "đơn đã huỷ KHÔNG cho quyền đánh giá".
+       CASE WHEN rn % 5 = 0 THEN 'CANCELLED' ELSE 'PENDING' END,
+       full_name, email, '0912345678', NULL,
+       now() - ((rn) || ' days')::interval, now()
+FROM chon
+WHERE rn <= 10;
+
+-- Mã đơn sinh từ id, đúng định dạng ứng dụng tạo ra (TG-<năm>-<id 6 chữ số>).
+UPDATE bookings SET code = 'TG-' || extract(year FROM created_at)::int || '-' || lpad(id::text, 6, '0')
+WHERE code IS NULL;
+
+-- Đơn chưa huỷ thì đang GIỮ CHỖ -> phải cộng vào booked_seats, nếu không dữ liệu mâu thuẫn:
+-- huỷ đơn qua API sẽ trừ số chỗ chưa từng được cộng, làm booked_seats âm.
+UPDATE tour_departures dp
+SET booked_seats = dp.booked_seats + sub.khach
+FROM (SELECT departure_id, sum(adults + children) AS khach
+      FROM bookings WHERE status <> 'CANCELLED'
+      GROUP BY departure_id) sub
+WHERE dp.id = sub.departure_id;
 
 -- ============================================================================
 -- 5) Phủ chi tiết (ảnh / lịch trình / highlights / included / excluded) cho MỌI tour,
@@ -126,15 +255,15 @@ UPDATE tours SET rating_avg = 4.5, review_count = 2 WHERE title = 'Nghỉ dưỡ
 
 INSERT INTO tour_highlights (tour_id, highlight)
 SELECT t.id,
-       (CASE t.category
-            WHEN 'BEACH'    THEN ARRAY['Bãi tắm riêng yên tĩnh', 'Ngắm bình minh trên vịnh', 'Tiệc hải sản tươi sống']
-            WHEN 'MOUNTAIN' THEN ARRAY['Toàn cảnh núi non hùng vĩ', 'Ruộng bậc thang mùa lúa chín', 'Ghé bản làng dân tộc']
-            WHEN 'CITY'     THEN ARRAY['Đi bộ khám phá phố cổ', 'Ngắm thành phố từ tầng thượng', 'Ẩm thực đường phố về đêm']
-            WHEN 'TREKKING' THEN ARRAY['Xuyên rừng cùng hướng dẫn viên', 'Tắm thác giữa rừng già', 'Cắm trại dưới bầu trời sao']
-            WHEN 'CRUISE'   THEN ARRAY['Nghỉ đêm trên du thuyền', 'Chèo kayak giữa vịnh đá vôi', 'Tiệc hoàng hôn trên boong']
+       (CASE c.slug
+            WHEN 'beach'    THEN ARRAY['Bãi tắm riêng yên tĩnh', 'Ngắm bình minh trên vịnh', 'Tiệc hải sản tươi sống']
+            WHEN 'mountain' THEN ARRAY['Toàn cảnh núi non hùng vĩ', 'Ruộng bậc thang mùa lúa chín', 'Ghé bản làng dân tộc']
+            WHEN 'city'     THEN ARRAY['Đi bộ khám phá phố cổ', 'Ngắm thành phố từ tầng thượng', 'Ẩm thực đường phố về đêm']
+            WHEN 'trekking' THEN ARRAY['Xuyên rừng cùng hướng dẫn viên', 'Tắm thác giữa rừng già', 'Cắm trại dưới bầu trời sao']
+            WHEN 'cruise'   THEN ARRAY['Nghỉ đêm trên du thuyền', 'Chèo kayak giữa vịnh đá vôi', 'Tiệc hoàng hôn trên boong']
             ELSE                 ARRAY['Di sản được UNESCO công nhận', 'Trải nghiệm làng nghề truyền thống', 'Đêm nhạc dân gian']
         END)[g]
-FROM tours t, generate_series(1, 3) AS g
+FROM tours t JOIN categories c ON c.id = t.category_id, generate_series(1, 3) AS g
 WHERE NOT EXISTS (SELECT 1 FROM tour_highlights h WHERE h.tour_id = t.id);
 
 INSERT INTO tour_included (tour_id, item)

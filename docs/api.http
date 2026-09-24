@@ -1,0 +1,414 @@
+# TripGo API — bộ request mẫu
+#
+# Chạy trực tiếp trong IntelliJ IDEA (HTTP Client) hoặc VS Code (extension "REST Client":
+# bấm "Send Request" phía trên mỗi request).
+#
+# Thứ tự dùng: (1) Đăng ký hoặc Đăng nhập để lấy token — biến {{token}} được gán tự động
+# từ response của request đăng nhập; (2) chạy các request còn lại.
+#
+# Dữ liệu mẫu: nạp scripts/seed-tours.sql trước để có tour/điểm đến/ngày khởi hành.
+# Tour id 1 có sẵn nhiều ngày khởi hành; tour id 2 không có ngày nào (để thử case rỗng).
+
+@host = http://localhost:8080/api/v1
+@email = demo.user@example.com
+@password = password123
+
+### ─────────────────────────────────────────────────────────────
+### F1 — XÁC THỰC
+### ─────────────────────────────────────────────────────────────
+
+### Đăng ký tài khoản mới → 201
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Demo User",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Đăng ký trùng email → 409 CONFLICT
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Demo User",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Đăng ký sai định dạng → 422 kèm map "fields"
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "",
+  "email": "khong-phai-email",
+  "password": "123"
+}
+
+### Đăng nhập → 200, lưu token vào biến {{token}}
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+> {%
+    client.global.set("token", response.body.token);
+%}
+
+@token = {{login.response.body.$.token}}
+
+### Đăng nhập sai mật khẩu → 401
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "sai-mat-khau"
+}
+
+### Thông tin tài khoản đang đăng nhập → 200
+GET {{host}}/auth/me
+Authorization: Bearer {{token}}
+
+### Không gửi token → 401
+GET {{host}}/auth/me
+
+### ─────────────────────────────────────────────────────────────
+### F2 — DANH SÁCH TOUR (search / filter / sort / phân trang)
+### ─────────────────────────────────────────────────────────────
+
+### Mặc định: trang 1, 10 item, sắp xếp newest → 200
+GET {{host}}/tours
+
+### Phân trang
+GET {{host}}/tours?page=2&limit=5
+
+### Tìm kiếm theo từ khoá (khớp title hoặc description)
+GET {{host}}/tours?q=beach
+
+### Lọc theo điểm đến (slug) + loại tour
+GET {{host}}/tours?destination=da-nang&category=beach
+
+### Lọc theo khoảng giá, số ngày, điểm đánh giá tối thiểu
+GET {{host}}/tours?minPrice=1000000&maxPrice=5000000&duration=3&rating=4
+
+### Sắp xếp: newest | price_asc | price_desc | rating (bí danh: rating_desc)
+GET {{host}}/tours?sort=price_asc
+
+### Kết hợp đầy đủ
+GET {{host}}/tours?q=da&destination=da-nang&category=beach&minPrice=1000000&maxPrice=9000000&duration=3&rating=4&sort=rating_desc&page=1&limit=5
+
+### sort không hợp lệ → 400
+GET {{host}}/tours?sort=khong-ton-tai
+
+### category không hợp lệ → 400
+GET {{host}}/tours?category=khong-ton-tai
+
+### limit vượt trần (MAX_LIMIT = 50) → 422
+GET {{host}}/tours?limit=999
+
+### ─────────────────────────────────────────────────────────────
+### F3 — CHI TIẾT TOUR
+### ─────────────────────────────────────────────────────────────
+
+### Chi tiết tour theo slug (kèm điểm đến, ảnh, lịch trình, highlights, startDates) → 200
+GET {{host}}/tours/da-nang-3n2d
+
+### Vẫn nhận id dạng số → 200
+GET {{host}}/tours/1
+
+### Slug không tồn tại → 404
+GET {{host}}/tours/khong-co-tour-nay
+
+### id không tồn tại → 404
+GET {{host}}/tours/999999
+
+### Endpoint con vẫn định danh bằng id; id sai kiểu → 400
+GET {{host}}/tours/abc/availability
+
+### ─────────────────────────────────────────────────────────────
+### F4 — NGÀY KHỞI HÀNH & CHỖ TRỐNG
+### ─────────────────────────────────────────────────────────────
+
+### Các ngày khởi hành sắp tới → 200
+GET {{host}}/tours/1/availability
+
+### Lọc theo tháng (YYYY-MM)
+GET {{host}}/tours/1/availability?month=2026-09
+
+### Tour không có ngày khởi hành nào → 200 với data rỗng
+GET {{host}}/tours/2/availability
+
+### Tháng sai định dạng → 400
+GET {{host}}/tours/1/availability?month=09-2026
+
+### ─────────────────────────────────────────────────────────────
+### F5 — ĐẶT TOUR
+### ─────────────────────────────────────────────────────────────
+### Lưu ý: "date" phải là một ngày có trong /tours/1/availability ở trên.
+### Server tự lấy userId từ JWT và tự tính totalPrice — client không gửi hai giá trị này.
+
+### Đặt tour → 201, status "pending"
+POST {{host}}/bookings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 1,
+  "date": "2026-09-18",
+  "adults": 2,
+  "children": 1,
+  "contact": {
+    "fullName": "Nguyen Van A",
+    "email": "nguyenvana@example.com",
+    "phone": "0912345678",
+    "note": "Suất ăn chay"
+  }
+}
+
+### Đặt tour khi chưa đăng nhập → 401
+POST {{host}}/bookings
+Content-Type: application/json
+
+{
+  "tourId": 1,
+  "date": "2026-09-18",
+  "adults": 1,
+  "children": 0,
+  "contact": {
+    "fullName": "Nguyen Van A",
+    "email": "nguyenvana@example.com",
+    "phone": "0912345678"
+  }
+}
+
+### Body sai (thiếu trường, sđt sai, ngày quá khứ) → 422 kèm "fields"
+POST {{host}}/bookings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": null,
+  "date": "2020-01-01",
+  "adults": 0,
+  "children": -1,
+  "contact": {
+    "name": "",
+    "email": "sai-email",
+    "phone": "123"
+  }
+}
+
+### Ngày không có chuyến khởi hành → 422
+POST {{host}}/bookings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 1,
+  "date": "2030-12-31",
+  "adults": 1,
+  "children": 0,
+  "contact": {
+    "fullName": "Nguyen Van A",
+    "email": "nguyenvana@example.com",
+    "phone": "0912345678"
+  }
+}
+
+### Đặt vượt số chỗ còn lại → 409 SOLD OUT
+POST {{host}}/bookings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 1,
+  "date": "2026-09-18",
+  "adults": 100,
+  "children": 0,
+  "contact": {
+    "fullName": "Nguyen Van A",
+    "email": "nguyenvana@example.com",
+    "phone": "0912345678"
+  }
+}
+
+### Tour không tồn tại → 404
+POST {{host}}/bookings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 999999,
+  "date": "2026-09-18",
+  "adults": 1,
+  "children": 0,
+  "contact": {
+    "fullName": "Nguyen Van A",
+    "email": "nguyenvana@example.com",
+    "phone": "0912345678"
+  }
+}
+
+### Danh sách đơn của tôi (phân trang, mới nhất trước) → 200
+GET {{host}}/bookings?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### Chi tiết một đơn của tôi → 200
+GET {{host}}/bookings/1
+Authorization: Bearer {{token}}
+
+### Đơn của người khác / không tồn tại → 404 (không lộ sự tồn tại của đơn)
+GET {{host}}/bookings/999999
+Authorization: Bearer {{token}}
+
+### Huỷ đơn → 200, status "cancelled", chỗ được hoàn lại
+PATCH {{host}}/bookings/1/cancel
+Authorization: Bearer {{token}}
+
+### Huỷ lại đơn đã huỷ → 409
+PATCH {{host}}/bookings/1/cancel
+Authorization: Bearer {{token}}
+
+### ─────────────────────────────────────────────────────────────
+### F6 — ĐÁNH GIÁ TOUR (điểm cộng)
+### ─────────────────────────────────────────────────────────────
+
+### Danh sách đánh giá của tour (public, phân trang, kèm averageRating) → 200
+GET {{host}}/tours/1/reviews?page=1&limit=10
+
+### Chưa từng đặt tour này → 403
+POST {{host}}/tours/2/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Chưa đặt tour mà vẫn đánh giá."
+}
+
+### Tạo đánh giá → 201 (phải đặt tour 1 ở mục F5 trước, đơn chưa huỷ)
+POST {{host}}/tours/1/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Tour rất đáng tiền, hướng dẫn viên nhiệt tình."
+}
+
+### Đánh giá lần hai cho cùng tour → 409
+POST {{host}}/tours/1/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Đánh giá trùng."
+}
+
+### rating ngoài khoảng 1..5 → 422
+POST {{host}}/tours/1/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 9,
+  "comment": "Sai thang điểm."
+}
+
+### Đánh giá khi chưa đăng nhập → 401
+POST {{host}}/tours/1/reviews
+Content-Type: application/json
+
+{
+  "rating": 5,
+  "comment": "Không có token."
+}
+
+### ─────────────────────────────────────────────────────────────
+### F8 — WISHLIST (cần đăng nhập)
+### ─────────────────────────────────────────────────────────────
+
+### Wishlist của tôi → 200 { "tourIds": [...] }
+GET {{host}}/wishlist
+Authorization: Bearer {{token}}
+
+### Thêm tour → 200, trả danh sách sau khi thêm
+POST {{host}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 1
+}
+
+### Thêm lại đúng tour đó → 200, danh sách KHÔNG bị lặp
+POST {{host}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 1
+}
+
+### Thiếu tourId → 422
+POST {{host}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+}
+
+### Tour không tồn tại → 404
+POST {{host}}/wishlist
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tourId": 999999
+}
+
+### Bỏ tour khỏi wishlist → 200
+DELETE {{host}}/wishlist/1
+Authorization: Bearer {{token}}
+
+### Bỏ tour không có trong wishlist → 200 (idempotent)
+DELETE {{host}}/wishlist/1
+Authorization: Bearer {{token}}
+
+### Chưa đăng nhập → 401
+GET {{host}}/wishlist
+
+### ─────────────────────────────────────────────────────────────
+### F7 — ĐIỂM ĐẾN (điểm cộng)
+### ─────────────────────────────────────────────────────────────
+
+### Danh sách điểm đến kèm ảnh & số tour (dùng cho dropdown lọc) → 200
+GET {{host}}/destinations
+
+### Danh sách loại hình tour kèm nhãn tiếng Việt (dropdown lọc) → 200
+### slug trả về dùng được ngay làm ?category= của GET /tours
+GET {{host}}/categories
+
+### ─────────────────────────────────────────────────────────────
+### KHÁC
+### ─────────────────────────────────────────────────────────────
+
+### OpenAPI JSON (profile prod tắt endpoint này)
+GET {{host}}/v3/api-docs
+
+### Rate limit: gọi POST /auth/login quá RATE_LIMIT_AUTH_MAX lần trong cửa sổ → 429
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "sai-mat-khau"
+}

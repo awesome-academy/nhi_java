@@ -75,7 +75,8 @@ public class TourMapper {
         );
     }
 
-    // Category xuất dạng slug chữ thường theo hợp đồng (beach|mountain|city|trekking|cruise|cultural).
+    // Category xuất dạng slug theo hợp đồng (beach|mountain|city|trekking|cruise|cultural).
+    // Quan hệ LAZY nên truy vấn danh sách phải fetch kèm, nếu không sẽ sinh N+1.
     private String category(Tour tour) {
         return tour.getCategory().getSlug();
     }

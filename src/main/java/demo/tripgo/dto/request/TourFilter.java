@@ -1,6 +1,5 @@
 package demo.tripgo.dto.request;
 
-import demo.tripgo.entity.TourCategory;
 
 import java.math.BigDecimal;
 
@@ -8,7 +7,7 @@ import java.math.BigDecimal;
 public record TourFilter(
     String q,
     String destination,
-    TourCategory category,
+    String categorySlug,
     BigDecimal minPrice,
     BigDecimal maxPrice,
     Integer duration,
