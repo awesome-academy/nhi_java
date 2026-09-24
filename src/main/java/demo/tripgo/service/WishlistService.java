@@ -1,5 +1,6 @@
 package demo.tripgo.service;
 
+import demo.tripgo.dto.response.RemoveWishlistResponse;
 import demo.tripgo.dto.response.WishlistResponse;
 import demo.tripgo.entity.Tour;
 import demo.tripgo.entity.User;
@@ -42,11 +43,16 @@ public class WishlistService {
     }
 
     @Transactional
-    public WishlistResponse removeTour(User user, Long tourId) {
+    public RemoveWishlistResponse removeTour(User user, Long tourId) {
         User managed = loadWithWishlist(user);
-        // Xoá tour không có trong wishlist là no-op: DELETE nên idempotent, gọi lại vẫn 200.
-        managed.getWishlist().removeIf(tour -> tour.getId().equals(tourId));
-        return toResponse(managed);
+        // Xoá tour không có trong wishlist vẫn là 200: DELETE nên idempotent, gọi lại không lỗi.
+        // Nhưng cờ removed cho client phân biệt "vừa xoá xong" với "vốn đã không có trong list".
+        boolean removed = managed.getWishlist().removeIf(tour -> tour.getId().equals(tourId));
+        return new RemoveWishlistResponse(
+            removed ? "Xoá tour khỏi wishlist thành công" : "Tour không có trong wishlist",
+            removed,
+            tourId
+        );
     }
 
     // Principal từ JWT đã detached nên phải nạp lại bản managed kèm collection.
