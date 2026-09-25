@@ -57,7 +57,7 @@ public class BookingService {
 
     @Transactional
     public BookingResponse createBooking(User user, CreateBookingRequest request) {
-        Tour tour = tourRepository.findById(request.tourId())
+        Tour tour = tourRepository.findActiveById(request.tourId())
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
 
         // Khoá hàng khởi hành để kiểm tra & trừ chỗ an toàn với request đồng thời.

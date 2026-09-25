@@ -21,6 +21,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @EntityGraph(attributePaths = {"tour", "departure"})
     Optional<Booking> findByIdAndUserId(Long id, Long userId);
 
+    // Số đơn còn hiệu lực của một tour: dùng để cảnh báo admin trước khi xoá.
+    long countByTourIdAndStatusNot(Long tourId, BookingStatus status);
+
     // Điều kiện được đánh giá: user đã đặt tour này và đơn chưa bị huỷ.
     boolean existsByUserIdAndTourIdAndStatusNot(Long userId, Long tourId, BookingStatus status);
 }

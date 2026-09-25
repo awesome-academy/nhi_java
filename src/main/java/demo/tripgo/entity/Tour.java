@@ -116,6 +116,17 @@ public class Tour {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // null = đang hoạt động. Xoá mềm chỉ ghi mốc thời gian, hàng vẫn nằm lại trong bảng để đơn đặt
+    // và đánh giá cũ còn tra được (đó là lý do không dùng DELETE thật).
+    @Column(name = "deleted_at")
+    @Setter
+    private LocalDateTime deletedAt;
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();

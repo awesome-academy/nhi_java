@@ -37,6 +37,8 @@ public final class TourSpecifications {
                 : (Join<?, ?>) root.fetch("category", JoinType.INNER);
 
             List<Predicate> predicates = new ArrayList<>();
+            // Luôn loại tour đã xoá mềm khỏi danh sách công khai, không phụ thuộc filter nào.
+            predicates.add(cb.isNull(root.get("deletedAt")));
 
             if (hasText(filter.q())) {
                 // Escape \, %, _ để chúng được hiểu là ký tự literal, không phải wildcard của LIKE.
