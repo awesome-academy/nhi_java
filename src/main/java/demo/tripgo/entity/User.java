@@ -10,7 +10,9 @@ import java.util.Set;
 
 @Getter
 @Entity
-@Table(name = "users")
+// (provider, provider_id) unique: một tài khoản Facebook chỉ gắn được vào đúng một user.
+// Postgres coi các NULL là khác nhau nên mọi user LOCAL (provider_id = null) không đụng ràng buộc.
+@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "provider_id"}))
 public class User {
 
     @Id
@@ -25,9 +27,22 @@ public class User {
     @Setter
     private String email;
 
-    @Column(nullable = false)
+    // Null với tài khoản đăng nhập bằng Facebook: họ không bao giờ đặt mật khẩu ở TripGo.
+    // AuthService.login chặn sẵn trường hợp này để không so khớp mật khẩu với null.
+    @Column
     @Setter
     private String password;
+
+    // Mặc định LOCAL để user đăng ký bằng email vẫn đúng ngay cả khi mapper không set.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Setter
+    private AuthProvider provider = AuthProvider.LOCAL;
+
+    // Id do Facebook cấp (trường "id" của Graph API). Null với tài khoản LOCAL.
+    @Column(name = "provider_id")
+    @Setter
+    private String providerId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

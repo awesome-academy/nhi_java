@@ -37,6 +37,17 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
+# Đăng nhập Facebook. Bỏ trống client-id -> tính năng không bật, app vẫn chạy bình thường.
+# Lấy giá trị ở https://developers.facebook.com/apps -> App settings -> Basic.
+social:
+  login:
+    facebook:
+      client-id: ${FACEBOOK_CLIENT_ID:}
+      client-secret: ${FACEBOOK_CLIENT_SECRET:}
+    # Có giá trị -> callback redirect về frontend kèm ?token=<JWT>.
+    # Bỏ trống -> trả JSON { token, user } ngay tại callback (tiện thử bằng trình duyệt).
+    success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:}
+
 # Ảnh admin tải lên. Lưu ngoài classpath để không mất khi đóng gói lại (xem StorageProperties).
 storage:
   upload-dir: ${UPLOAD_DIR:./uploads}

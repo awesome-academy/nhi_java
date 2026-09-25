@@ -1,5 +1,6 @@
 package demo.tripgo.repository;
 
+import demo.tripgo.entity.AuthProvider;
 import demo.tripgo.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
+
+    // Khoá nhận dạng của tài khoản social: id Facebook không đổi kể cả khi user đổi tên/email.
+    Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 
     // Principal lấy từ JWT là entity đã detached -> phải nạp lại kèm wishlist trong transaction
     // hiện tại. left join fetch để user chưa lưu tour nào vẫn trả về (wishlist rỗng).

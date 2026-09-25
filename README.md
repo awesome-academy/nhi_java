@@ -93,6 +93,29 @@ Giao diện dùng Bootstrap 5 (CDN) + `src/main/resources/static/css/admin.css`.
 
 ---
 
+## 2c. Đăng nhập Facebook (tuỳ chọn)
+
+Bỏ trống `FACEBOOK_CLIENT_ID` thì tính năng không được bật và ứng dụng chạy bình thường với
+đăng nhập email/mật khẩu.
+
+| Đường dẫn | Mô tả |
+|---|---|
+| `/oauth2/authorization/facebook` | Bắt đầu đăng nhập (mở bằng trình duyệt) |
+| `/login/oauth2/code/facebook` | Callback Facebook gọi về |
+
+Khai trong app Facebook (App settings → Basic) và thêm **Valid OAuth Redirect URI**:
+`http://localhost:8080/login/oauth2/code/facebook`
+
+Xong luồng, TripGo đổi sang **JWT của chính nó** để client dùng chung một loại token cho mọi
+endpoint. Đặt `OAUTH2_SUCCESS_REDIRECT_URI` thì callback redirect về đó kèm `?token=`; bỏ trống
+thì trả thẳng JSON `{ token, user }` như `POST /auth/login`.
+
+Tài khoản Facebook không có mật khẩu, nên `POST /auth/login` với email đó trả 401 kèm lời nhắn
+dùng đăng nhập Facebook. Nếu email đã có tài khoản email/mật khẩu, Facebook được **gắn vào chính
+tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
+
+---
+
 ## 3. Chạy bằng Docker (khuyến nghị)
 
 Yêu cầu Docker + Docker Compose. Compose dựng sẵn cả Postgres lẫn API.

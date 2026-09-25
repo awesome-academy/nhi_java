@@ -72,6 +72,14 @@ public class AuthService {
                 )
             );
 
+        // Tài khoản tạo qua Facebook không có mật khẩu: nói rõ để user khỏi thử lại vô ích,
+        // thay vì trả "sai mật khẩu" cho một mật khẩu chưa từng tồn tại.
+        if (user.getPassword() == null) {
+            throw new InvalidCredentialsException(
+                "Tài khoản này đăng nhập bằng Facebook, vui lòng dùng đăng nhập Facebook"
+            );
+        }
+
         if (!passwordEncoder.matches(
                 request.password(),
                 user.getPassword()
