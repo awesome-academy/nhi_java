@@ -78,6 +78,21 @@ class AdminTourListIntegrationTest {
             .andExpect(content().string(containsString("+ Thêm tour")));
     }
 
+    // Cột ảnh: có thumbnail thì render <img>, không có thì hiện dấu gạch chứ không để ô trống.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void showsThumbnailColumn() throws Exception {
+        Tour withImage = saveTour("Tour có ảnh");
+        withImage.setThumbnailUrl("/uploads/dulich.jpg");
+        tours.saveAndFlush(withImage);
+        saveTour("Tour không ảnh");
+
+        mvc.perform(get("/admin/tours"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("<img class=\"row-thumb\"")))
+            .andExpect(content().string(containsString("/uploads/dulich.jpg")));
+    }
+
     @Test
     @WithMockUser(roles = "ADMIN")
     void emptyListShowsPlaceholderRow() throws Exception {

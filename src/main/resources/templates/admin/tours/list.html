@@ -26,6 +26,7 @@
         <thead>
         <tr>
             <th>ID</th>
+            <th>Ảnh</th>
             <th>Tên tour</th>
             <th>Điểm đến</th>
             <th class="num">Giá</th>
@@ -36,6 +37,11 @@
         <tbody>
         <tr th:each="tour : ${tours}">
             <td th:text="${tour.id}">1</td>
+            <td>
+                <img class="row-thumb" th:if="${tour.thumbnail}"
+                     th:src="${tour.thumbnail}" th:alt="${tour.title}">
+                <span class="sub" th:unless="${tour.thumbnail}">—</span>
+            </td>
             <td th:text="${tour.title}">Tên tour</td>
             <td th:text="${tour.destination}">Điểm đến</td>
             <td class="num" th:text="${#numbers.formatInteger(tour.price, 0, 'POINT')}">0</td>
@@ -51,7 +57,7 @@
             </td>
         </tr>
         <tr th:if="${tours.isEmpty()}">
-            <td colspan="6" class="empty-row"
+            <td colspan="7" class="empty-row"
                 th:text="${q != null and !q.isEmpty()}
                          ? 'Không tìm thấy tour nào khớp từ khoá'
                          : 'Chưa có tour nào'">Chưa có tour nào</td>
