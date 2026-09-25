@@ -108,6 +108,22 @@ public class BookingService {
     public BookingResponse cancelBooking(User user, Long id) {
         Booking booking = bookingRepository.findByIdAndUserId(id, user.getId())
             .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
+        cancelAndReleaseSeats(booking);
+        return bookingMapper.toResponse(booking);
+    }
+
+    // Admin huỷ đơn của bất kỳ khách nào, nên tìm theo id chứ không ràng buộc user.
+    // Vẫn đi qua cùng một hàm huỷ để phần hoàn chỗ (có khoá) chỉ tồn tại ở MỘT nơi —
+    // chép logic này sang service khác là mời gọi bug bán vượt số chỗ.
+    @Transactional
+    public Booking cancelByAdmin(Long id) {
+        Booking booking = bookingRepository.findWithDetailsById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
+        cancelAndReleaseSeats(booking);
+        return booking;
+    }
+
+    private void cancelAndReleaseSeats(Booking booking) {
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new BookingAlreadyCancelledException(booking.getCode());
         }
@@ -119,7 +135,6 @@ public class BookingService {
         Departure departure = booking.getDeparture();
         entityManager.refresh(departure, LockModeType.PESSIMISTIC_WRITE);
         departure.setBookedSeats(departure.getBookedSeats() - (booking.getAdults() + booking.getChildren()));
-        return bookingMapper.toResponse(booking);
     }
 
     // Giá mỗi khách = giá KM nếu có, ngược lại giá gốc; tổng = giá * tổng số khách.

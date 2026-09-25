@@ -21,6 +21,20 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @EntityGraph(attributePaths = {"tour", "departure"})
     Optional<Booking> findByIdAndUserId(Long id, Long userId);
 
+    // Bảng đơn của khu quản trị. Fetch sẵn user/tour/departure vì mỗi dòng đều hiển thị cả ba;
+    // không có @EntityGraph thì 20 dòng sinh 60 truy vấn phụ.
+    @EntityGraph(attributePaths = {"user", "tour", "departure"})
+    Page<Booking> findAllBy(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"user", "tour", "departure"})
+    Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
+
+    // Nạp kèm quan hệ để đổi trạng thái không phải truy vấn thêm.
+    @EntityGraph(attributePaths = {"user", "tour", "departure"})
+    Optional<Booking> findWithDetailsById(Long id);
+
+    long countByStatus(BookingStatus status);
+
     // Số đơn còn hiệu lực của một tour: dùng để cảnh báo admin trước khi xoá.
     long countByTourIdAndStatusNot(Long tourId, BookingStatus status);
 

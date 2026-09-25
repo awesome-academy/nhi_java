@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Đơn đặt · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Đơn đặt <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+    </div>
+
+    <!--/* Lọc bằng link thay vì select + JS: URL mang theo bộ lọc nên chia sẻ/bookmark được. */-->
+    <nav class="filter-bar">
+        <a th:href="@{/admin/bookings}"
+           th:classappend="${selectedStatus == null} ? 'active'">Tất cả</a>
+        <a th:each="s : ${statuses}"
+           th:href="@{/admin/bookings(status=${s.name()})}"
+           th:text="${s.label}"
+           th:classappend="${selectedStatus != null and selectedStatus.name() == s.name()} ? 'active'">Trạng thái</a>
+    </nav>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Mã đơn</th>
+            <th>Khách</th>
+            <th>Tour</th>
+            <th>Ngày đi</th>
+            <th class="num">Khách</th>
+            <th class="num">Tổng tiền</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="b : ${bookings}">
+            <td th:text="${b.code}">TG-2026-000001</td>
+            <td>
+                <span th:text="${b.customerName}">Nguyễn A</span>
+                <span class="sub" th:if="${b.customerEmail}" th:text="${b.customerEmail}">a@example.com</span>
+            </td>
+            <td th:text="${b.tourTitle}">Tour</td>
+            <td th:text="${#temporals.format(b.departureDate, 'dd/MM/yyyy')}">01/01/2026</td>
+            <td class="num" th:text="${b.guests}">2</td>
+            <td class="num" th:text="${#numbers.formatInteger(b.totalPrice, 0, 'POINT')}">0</td>
+            <td>
+                <span class="badge"
+                      th:text="${b.status.label}"
+                      th:classappend="'badge-' + ${b.status.name().toLowerCase()}">Chờ xác nhận</span>
+            </td>
+            <td>
+                <!--/* Chỉ đơn đang chờ mới đổi được; service cũng chặn lại nên ẩn nút chỉ là lớp
+                       thuận tiện, không phải lớp bảo vệ. */-->
+                <span th:if="${b.actionable}">
+                    <form th:action="@{/admin/bookings/{id}/confirm(id=${b.id})}" method="post" class="inline-form">
+                        <input type="hidden" name="status"
+                               th:value="${selectedStatus != null} ? ${selectedStatus.name()} : ''">
+                        <button type="submit" class="btn-link">Xác nhận</button>
+                    </form>
+                    <form th:action="@{/admin/bookings/{id}/cancel(id=${b.id})}" method="post" class="inline-form"
+                          onsubmit="return confirm('Huỷ đơn này? Số chỗ sẽ được hoàn lại cho ngày khởi hành.');">
+                        <input type="hidden" name="status"
+                               th:value="${selectedStatus != null} ? ${selectedStatus.name()} : ''">
+                        <button type="submit" class="btn-link danger">Huỷ đơn</button>
+                    </form>
+                </span>
+                <span th:unless="${b.actionable}" class="sub">—</span>
+            </td>
+        </tr>
+        <tr th:if="${bookings.isEmpty()}">
+            <td colspan="8" class="empty-row"
+                th:text="${selectedStatus != null}
+                         ? 'Không có đơn nào ở trạng thái này'
+                         : 'Chưa có đơn đặt nào'">Chưa có đơn đặt nào</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <nav class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/admin/bookings(status=${selectedStatus?.name()}, page=${currentPage - 1})}">‹</a>
+        <span th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <a th:href="@{/admin/bookings(status=${selectedStatus?.name()}, page=${p})}"
+               th:text="${p}" th:classappend="${p == currentPage} ? 'current'">1</a>
+        </span>
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/admin/bookings(status=${selectedStatus?.name()}, page=${currentPage + 1})}">›</a>
+    </nav>
+
+</main>
+</body>
+</html>
