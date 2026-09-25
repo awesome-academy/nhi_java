@@ -1,0 +1,17 @@
+# Profile cho test chạy Postgres thật (xem PostgresTestBase).
+# Datasource do @ServiceConnection của Testcontainers cấp, nên ở đây không khai url/username.
+spring:
+  jpa:
+    hibernate:
+      # Mỗi class test dựng schema mới trên container riêng rồi bỏ đi.
+      ddl-auto: create-drop
+
+# Public test fixture only; never use this key outside tests.
+jwt:
+  secret: test-only-jwt-signing-key-not-for-production-0123456789
+  expiration: 86400000
+
+ratelimit:
+  auth:
+    max-requests: 100000
+    window-seconds: 60
