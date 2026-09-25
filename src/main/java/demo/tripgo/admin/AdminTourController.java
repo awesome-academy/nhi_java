@@ -7,7 +7,10 @@ import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.dto.response.PageResponse;
 import demo.tripgo.dto.response.TourSummaryResponse;
+import demo.tripgo.service.ExcelExportService;
 import demo.tripgo.service.TourAdminService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import demo.tripgo.service.TourService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,13 +39,16 @@ public class AdminTourController {
     private final TourAdminService tourAdminService;
     private final DestinationRepository destinationRepository;
     private final CategoryRepository categoryRepository;
+    private final ExcelExportService excelExportService;
 
     public AdminTourController(
         TourService tourService,
         TourAdminService tourAdminService,
         DestinationRepository destinationRepository,
-        CategoryRepository categoryRepository
+        CategoryRepository categoryRepository,
+        ExcelExportService excelExportService
     ) {
+        this.excelExportService = excelExportService;
         this.tourService = tourService;
         this.tourAdminService = tourAdminService;
         this.destinationRepository = destinationRepository;
@@ -69,6 +75,11 @@ public class AdminTourController {
         model.addAttribute("totalPages", totalPages(tours));
         model.addAttribute("total", tours.total());
         return "admin/tours/list";
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<Resource> export(@RequestParam(required = false) String q) {
+        return ExcelDownload.of(excelExportService.exportTours(q), "tour");
     }
 
     // ---- Tạo / sửa ----

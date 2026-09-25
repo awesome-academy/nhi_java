@@ -48,6 +48,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         """)
     java.math.BigDecimal sumRevenueSince(@Param("from") java.time.LocalDateTime from);
 
+    // Doanh thu tháng gộp theo tour, dùng cho file báo cáo. Gộp ở DB thay vì tải hết đơn về rồi
+    // cộng trong bộ nhớ.
+    @Query("""
+        select b.tour.title as tourTitle,
+               count(b.id) as bookingCount,
+               sum(b.adults + b.children) as guestCount,
+               sum(b.totalPrice) as revenue
+        from Booking b
+        where b.status <> demo.tripgo.entity.BookingStatus.CANCELLED
+          and b.createdAt >= :from
+        group by b.tour.id, b.tour.title
+        order by sum(b.totalPrice) desc
+        """)
+    java.util.List<RevenueByTourView> revenueByTourSince(@Param("from") java.time.LocalDateTime from);
+
     // Số đơn còn hiệu lực của một tour: dùng để cảnh báo admin trước khi xoá.
     long countByTourIdAndStatusNot(Long tourId, BookingStatus status);
 

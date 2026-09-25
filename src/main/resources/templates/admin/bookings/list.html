@@ -9,6 +9,9 @@
 
     <div class="page-header">
         <h1 class="page-title">Đơn đặt <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+        <!--/* Giữ bộ lọc đang xem sang URL xuất file, để file khớp đúng bảng trên màn hình. */-->
+        <a class="btn-secondary"
+           th:href="@{/admin/bookings/export(status=${selectedStatus?.name()})}">⭳ Xuất Excel</a>
     </div>
 
     <!--/* Lọc bằng link thay vì select + JS: URL mang theo bộ lọc nên chia sẻ/bookmark được. */-->

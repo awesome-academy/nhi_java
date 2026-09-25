@@ -3,7 +3,9 @@ package demo.tripgo.admin;
 import demo.tripgo.entity.Category;
 import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Tour;
+import demo.tripgo.repository.BookingRepository;
 import demo.tripgo.repository.CategoryRepository;
+import demo.tripgo.repository.DepartureRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.repository.TourRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,11 +39,17 @@ class AdminTourListIntegrationTest {
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
+    @Autowired BookingRepository bookings;
+    @Autowired DepartureRepository departures;
 
     private Destination destination;
 
     @BeforeEach
     void setUp() {
+        // Dọn theo đúng thứ tự khoá ngoại: lớp test chạy trước có thể để lại đơn/ngày khởi hành
+        // trỏ vào tours, xoá tours trước sẽ vi phạm ràng buộc.
+        bookings.deleteAll();
+        departures.deleteAll();
         tours.deleteAll();
         destinations.deleteAll();
 

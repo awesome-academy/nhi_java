@@ -5,6 +5,9 @@ import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.exception.BookingAlreadyCancelledException;
 import demo.tripgo.exception.InvalidBookingRequestException;
 import demo.tripgo.service.BookingAdminService;
+import demo.tripgo.service.ExcelExportService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,9 +25,14 @@ public class AdminBookingController {
     private static final int PAGE_SIZE = 20;
 
     private final BookingAdminService bookingAdminService;
+    private final ExcelExportService excelExportService;
 
-    public AdminBookingController(BookingAdminService bookingAdminService) {
+    public AdminBookingController(
+        BookingAdminService bookingAdminService,
+        ExcelExportService excelExportService
+    ) {
         this.bookingAdminService = bookingAdminService;
+        this.excelExportService = excelExportService;
     }
 
     @GetMapping
@@ -46,6 +54,14 @@ public class AdminBookingController {
         model.addAttribute("totalPages", Math.max(bookings.getTotalPages(), 1));
         model.addAttribute("total", bookings.getTotalElements());
         return "admin/bookings/list";
+    }
+
+    // Xuất đúng bộ lọc đang xem, nên URL nhận cùng tham số status với trang danh sách.
+    @GetMapping("/export")
+    public ResponseEntity<Resource> export(@RequestParam(required = false) String status) {
+        BookingStatus filter = parseStatus(status);
+        String suffix = filter == null ? "tat-ca" : filter.name().toLowerCase(java.util.Locale.ROOT);
+        return ExcelDownload.of(excelExportService.exportBookings(filter), "don-dat-" + suffix);
     }
 
     @PostMapping("/{id}/confirm")

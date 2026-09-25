@@ -10,6 +10,7 @@
     <div class="page-header">
         <h1 class="page-title">Tour <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
         <span class="header-actions">
+            <a th:href="@{/admin/tours/export(q=${q})}" class="btn-secondary">⭳ Xuất Excel</a>
             <a th:href="@{/admin/tours/trash}" class="btn-secondary">Thùng rác</a>
             <a th:href="@{/admin/tours/new}" class="btn-primary">+ Thêm tour</a>
         </span>
