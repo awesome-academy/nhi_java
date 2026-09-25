@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Điểm đến · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Điểm đến <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+        <span class="header-actions">
+            <a th:href="@{/admin/destinations/trash}" class="btn-secondary">Thùng rác</a>
+            <a th:href="@{/admin/destinations/new}" class="btn-primary">+ Thêm điểm đến</a>
+        </span>
+    </div>
+
+    <form th:action="@{/admin/destinations}" method="get" class="search-bar">
+        <input type="search" name="q" th:value="${q}" placeholder="Tìm theo tên điểm đến...">
+        <button type="submit">Tìm</button>
+        <a th:if="${q != null and !q.isEmpty()}" th:href="@{/admin/destinations}" class="search-clear">Xoá lọc</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Ảnh</th>
+            <th>Tên</th>
+            <th>Slug</th>
+            <th class="num">Số tour</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="d : ${destinations}">
+            <td>
+                <img class="row-thumb" th:if="${d.image}" th:src="${d.image}" th:alt="${d.name}">
+                <span class="sub" th:unless="${d.image}">—</span>
+            </td>
+            <td th:text="${d.name}">Đà Nẵng</td>
+            <td><code th:text="${d.slug}">da-nang</code></td>
+            <td class="num" th:text="${d.tourCount}">0</td>
+            <td>
+                <a th:href="@{/admin/destinations/{id}/edit(id=${d.id})}" class="btn-link">Sửa</a>
+                <!--/* Điểm đến còn tour thì không xoá được; nói trước ngay trên nút thay vì để
+                       admin bấm rồi mới nhận thông báo lỗi. */-->
+                <form th:action="@{/admin/destinations/{id}/delete(id=${d.id})}" method="post"
+                      class="inline-form"
+                      onsubmit="return confirm('Xoá điểm đến này? Nó sẽ chuyển vào thùng rác.');">
+                    <button type="submit" class="btn-link danger"
+                            th:disabled="${d.tourCount > 0}"
+                            th:title="${d.tourCount > 0}
+                                      ? 'Còn ' + ${d.tourCount} + ' tour thuộc điểm đến này'
+                                      : 'Chuyển vào thùng rác'">Xoá</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${destinations.isEmpty()}">
+            <td colspan="5" class="empty-row"
+                th:text="${q != null and !q.isEmpty()}
+                         ? 'Không tìm thấy điểm đến nào khớp từ khoá'
+                         : 'Chưa có điểm đến nào'">Chưa có điểm đến nào</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <nav class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}" th:href="@{/admin/destinations(q=${q}, page=${currentPage - 1})}">‹</a>
+        <span th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <a th:href="@{/admin/destinations(q=${q}, page=${p})}" th:text="${p}"
+               th:classappend="${p == currentPage} ? 'current'">1</a>
+        </span>
+        <a th:if="${currentPage < totalPages}" th:href="@{/admin/destinations(q=${q}, page=${currentPage + 1})}">›</a>
+    </nav>
+
+</main>
+</body>
+</html>
