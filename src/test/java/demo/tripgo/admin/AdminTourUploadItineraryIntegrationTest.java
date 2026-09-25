@@ -46,14 +46,14 @@ class AdminTourUploadItineraryIntegrationTest {
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Destination destination;
     private Category category;
 
     @BeforeEach
     void setUp() {
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
 
         destination = new Destination();
         destination.setName("Đà Nẵng");

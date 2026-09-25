@@ -48,6 +48,7 @@ class AdminDashboardIntegrationTest {
     @Autowired BookingRepository bookings;
     @Autowired DepartureRepository departures;
     @Autowired UserRepository users;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Destination destination;
     private Tour tour;
@@ -55,11 +56,7 @@ class AdminDashboardIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         destination = new Destination();
         destination.setName("Đà Nẵng");

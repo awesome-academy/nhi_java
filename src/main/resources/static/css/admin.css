@@ -761,3 +761,16 @@ a.stat-card:hover {
     color: #9ca3af;
     font-size: 12px;
 }
+
+/* Kết quả nhập file: tách khỏi form phía trên cho dễ đọc. */
+.import-result {
+    margin-top: 28px;
+}
+
+.import-result .stat-grid {
+    margin-bottom: 16px;
+}
+
+.import-result .flash {
+    display: inline-block;
+}

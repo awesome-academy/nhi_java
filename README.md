@@ -134,6 +134,28 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
+## 2e. Nhập tour từ Excel
+
+`/admin/tours/import` — có nút tải **file mẫu** sinh từ chính lớp `TourImportRow`, nên cột trong
+file mẫu không bao giờ lệch với cột bộ nhập mong đợi.
+
+| Cột bắt buộc | Ghi chú |
+|---|---|
+| `Tên tour` | |
+| `Điểm đến` | nhập **slug** (vd `da-nang`) |
+| `Loại hình` | nhập **slug** (vd `beach`) |
+| `Giá`, `Số ngày`, `Số khách tối đa` | |
+
+Cột khớp theo **tên tiêu đề** nên thứ tự cột không quan trọng; thừa cột cũng không sao.
+
+Nguyên tắc xử lý:
+
+- **Nhập được dòng nào hay dòng đó.** Một ô gõ sai chỉ làm hỏng dòng đó, kèm số dòng đúng như
+  trong Excel để tìm mà sửa.
+- **Slug trùng thì bỏ qua**, không ghi đè — nhập lại cùng một file không tạo bản sao và không
+  đè lên dữ liệu admin đã sửa tay.
+- Mỗi dòng là một transaction riêng, nên một dòng hỏng không kéo đổ những dòng đã lưu.
+
 ---
 
 ## 3. Chạy bằng Docker (khuyến nghị)

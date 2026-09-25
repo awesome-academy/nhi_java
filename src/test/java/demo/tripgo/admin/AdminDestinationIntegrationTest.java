@@ -47,15 +47,11 @@ class AdminDestinationIntegrationTest {
     @Autowired CategoryRepository categories;
     @Autowired BookingRepository bookings;
     @Autowired DepartureRepository departures;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     @BeforeEach
     void setUp() {
-        // Dọn theo đúng thứ tự khoá ngoại: lớp test chạy trước có thể để lại đơn/ngày khởi hành
-        // trỏ vào tours, xoá tours trước sẽ vi phạm ràng buộc.
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
     }
 
     // ---- Danh sách ----

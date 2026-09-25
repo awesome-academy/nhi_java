@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Nhập tour từ Excel · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Nhập tour từ Excel</h1>
+        <a th:href="@{/admin/tours}" class="btn-secondary">← Về danh sách tour</a>
+    </div>
+
+    <div class="form-card">
+        <p class="hint">
+            Cột bắt buộc: <code>Tên tour</code>, <code>Điểm đến</code>, <code>Loại hình</code>,
+            <code>Giá</code>, <code>Số ngày</code>, <code>Số khách tối đa</code>.
+            Điểm đến và loại hình nhập bằng <strong>slug</strong> (vd <code>da-nang</code>,
+            <code>beach</code>). Cột được khớp theo tên tiêu đề nên thứ tự cột không quan trọng.
+        </p>
+        <p class="hint">
+            Dòng lỗi được báo lại kèm số dòng, những dòng còn lại vẫn nhập bình thường.
+            Tour có slug trùng sẽ bị bỏ qua, không ghi đè.
+        </p>
+
+        <p><a th:href="@{/admin/tours/import/template}" class="btn-secondary">⭳ Tải file mẫu</a></p>
+
+        <div class="form-global-error" th:if="${errorMessage}">
+            <p th:text="${errorMessage}">Lỗi</p>
+        </div>
+
+        <form th:action="@{/admin/tours/import}" method="post" enctype="multipart/form-data">
+            <div class="form-row">
+                <label for="file">File Excel (.xlsx)</label>
+                <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Nhập</button>
+            </div>
+        </form>
+    </div>
+
+    <!--/* Kết quả sau khi nhập: tổng quan trước, chi tiết lỗi sau. */-->
+    <div th:if="${summary}" class="import-result">
+        <h2 class="page-title">Kết quả</h2>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-label">Tổng dòng</span>
+                <span class="stat-value" th:text="${summary.totalRows}">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Đã nhập</span>
+                <span class="stat-value" th:text="${summary.imported}">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Bỏ qua</span>
+                <span class="stat-value" th:text="${summary.skipped}">0</span>
+            </div>
+        </div>
+
+        <p class="flash flash-success" th:unless="${summary.hasErrors()}">
+            Nhập xong, không có dòng nào lỗi.
+        </p>
+
+        <table class="data-table" th:if="${summary.hasErrors()}">
+            <thead>
+            <tr>
+                <th style="width: 120px">Dòng</th>
+                <th>Vấn đề</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="error : ${summary.errors}">
+                <td th:text="${error.rowNumber}">2</td>
+                <td th:text="${error.message}">Mô tả lỗi</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
+</body>
+</html>

@@ -44,6 +44,7 @@ class SoftDeleteIntegrationTest {
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Destination destination;
     private Tour live;
@@ -51,9 +52,7 @@ class SoftDeleteIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        users.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
 
         destination = new Destination();
         destination.setName("Da Nang");

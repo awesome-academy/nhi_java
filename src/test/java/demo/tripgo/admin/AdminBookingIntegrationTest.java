@@ -53,17 +53,14 @@ class AdminBookingIntegrationTest {
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
     @Autowired UserRepository users;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Tour tour;
     private Departure departure;
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         Destination destination = new Destination();
         destination.setName("Đà Nẵng");
