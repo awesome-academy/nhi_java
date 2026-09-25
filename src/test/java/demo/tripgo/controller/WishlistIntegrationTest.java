@@ -88,13 +88,12 @@ class WishlistIntegrationTest {
 
     @Test
     void allWishlistEndpointsRequireAuthentication() throws Exception {
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist"))
+        mvc.perform(get("/api/v1/wishlist"))
             .andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .contentType(MediaType.APPLICATION_JSON).content(body(tourA.getId())))
             .andExpect(status().isUnauthorized());
-        mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
-                .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId()))
+        mvc.perform(delete("/api/v1/wishlist/" + tourA.getId()))
             .andExpect(status().isUnauthorized());
     }
 
@@ -102,7 +101,7 @@ class WishlistIntegrationTest {
 
     @Test
     void wishlistStartsEmpty() throws Exception {
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", tokenFor()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds").isArray())
@@ -113,27 +112,26 @@ class WishlistIntegrationTest {
     void addThenGetThenRemove() throws Exception {
         String token = tokenFor();
 
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tourA.getId())))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(1))
             .andExpect(jsonPath("$.tourIds[0]").value(tourA.getId()));
 
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tourB.getId())))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(2));
 
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(2));
 
         // DELETE báo kết quả xoá, không trả lại danh sách.
         mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
-                .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.removed").value(true))
@@ -142,7 +140,7 @@ class WishlistIntegrationTest {
             .andExpect(jsonPath("$.tourIds").doesNotExist());
 
         // Danh sách sau khi xoá lấy bằng GET.
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.tourIds.length()").value(1))
@@ -156,14 +154,14 @@ class WishlistIntegrationTest {
         String token = tokenFor();
 
         for (int i = 0; i < 3; i++) {
-            mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+            mvc.perform(post("/api/v1/wishlist")
                     .header("Authorization", token)
                     .contentType(MediaType.APPLICATION_JSON).content(body(tourA.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tourIds.length()").value(1));
         }
 
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", token))
             .andExpect(jsonPath("$.tourIds.length()").value(1));
     }
@@ -175,24 +173,23 @@ class WishlistIntegrationTest {
         String tokenA = tokenFor();
         String tokenB = tokenFor();
 
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", tokenA)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tourA.getId())))
             .andExpect(status().isOk());
 
         // User B không thấy tour của A.
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", tokenB))
             .andExpect(jsonPath("$.tourIds").isEmpty());
 
         // B xoá đúng tourId đó cũng không đụng được wishlist của A.
         mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
-                .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
                 .header("Authorization", tokenB))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.removed").value(false));
 
-        mvc.perform(get("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(get("/api/v1/wishlist")
                 .header("Authorization", tokenA))
             .andExpect(jsonPath("$.tourIds.length()").value(1));
     }
@@ -201,7 +198,7 @@ class WishlistIntegrationTest {
 
     @Test
     void addingUnknownTourReturns404() throws Exception {
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", tokenFor())
                 .contentType(MediaType.APPLICATION_JSON).content(body(999999L)))
             .andExpect(status().isNotFound())
@@ -210,7 +207,7 @@ class WishlistIntegrationTest {
 
     @Test
     void addingWithoutTourIdReturns422() throws Exception {
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", tokenFor())
                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isUnprocessableEntity())
@@ -221,7 +218,7 @@ class WishlistIntegrationTest {
     // Từng là bug: exception lọt ra /error, filter không chạy lại -> SecurityContext rỗng -> 401.
     @Test
     void addingWithWrongTypeReturns422NotUnauthorized() throws Exception {
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", tokenFor())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"tourId\":[\"3\",\"4\"]}"))
             .andExpect(status().isUnprocessableEntity())
@@ -232,7 +229,7 @@ class WishlistIntegrationTest {
     // JSON hỏng hẳn (không xác định được trường nào) -> 400, vẫn không phải 401.
     @Test
     void addingWithBrokenJsonReturns400NotUnauthorized() throws Exception {
-        mvc.perform(post("/api/v1/wishlist").contextPath("/api/v1").servletPath("/wishlist")
+        mvc.perform(post("/api/v1/wishlist")
                 .header("Authorization", tokenFor())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"tourId\": "))
             .andExpect(status().isBadRequest())
@@ -243,7 +240,6 @@ class WishlistIntegrationTest {
     @Test
     void removingTourNotInWishlistIsNoOp() throws Exception {
         mvc.perform(delete("/api/v1/wishlist/" + tourA.getId())
-                .contextPath("/api/v1").servletPath("/wishlist/" + tourA.getId())
                 .header("Authorization", tokenFor()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.removed").value(false))

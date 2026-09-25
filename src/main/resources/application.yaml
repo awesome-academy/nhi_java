@@ -7,6 +7,12 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
 
+  # Mặc định của Spring chỉ 1MB; nới ra cho khớp giới hạn 5MB của storage bên dưới.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -19,8 +25,8 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
-  servlet:
-    context-path: /api/v1
+# Không dùng context-path: tiền tố /api/v1 do ApiPathConfig gắn riêng cho package controller,
+# để khu quản trị /admin/** nằm ngoài tiền tố đó.
 
 jwt:
   secret: ${JWT_SECRET}
@@ -30,6 +36,20 @@ jwt:
 # Origin được phép gọi API (CSV). Mặc định "*" cho dev; prod nên set CORS_ALLOWED_ORIGINS cụ thể.
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
+# Ảnh admin tải lên. Lưu ngoài classpath để không mất khi đóng gói lại (xem StorageProperties).
+storage:
+  upload-dir: ${UPLOAD_DIR:./uploads}
+  public-path: /uploads
+  max-file-size-bytes: ${UPLOAD_MAX_BYTES:5242880}
+
+# Tài khoản quản trị đầu tiên, tạo lúc khởi động nếu email chưa tồn tại (xem AdminAccountSeeder).
+# Bỏ trống -> không tạo gì cả.
+admin:
+  seed:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+    name: ${ADMIN_NAME:Quản trị viên}
 
 # Rate limit chống brute-force cho POST /auth/** (số request mỗi IP mỗi cửa sổ).
 ratelimit:

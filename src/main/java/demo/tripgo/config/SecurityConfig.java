@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import static demo.tripgo.config.ApiPathConfig.API_PREFIX;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -27,6 +29,7 @@ import java.util.List;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final SecurityErrorResponder securityErrorResponder;
@@ -114,40 +117,49 @@ public class SecurityConfig {
                 // trên ERROR dispatch). Không permitAll thì client nhận 401 che mất lỗi thật.
                 .requestMatchers("/error").permitAll()
 
+                // Tài nguyên tĩnh của khu quản trị (CSS/JS/ảnh). Chúng nằm NGOÀI /admin/** nên
+                // rơi vào chain này; không mở thì trang đăng nhập admin sẽ mất hết định dạng.
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+
+                // Ảnh tour do admin tải lên: trang bán hàng công khai phải xem được.
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+
                 // Cho phép người chưa đăng nhập gọi API đăng ký và đăng nhập.
-                // Matcher không gồm context-path /api/v1 vì servlet container đã tách phần này.
+                // Matcher phải gồm cả tiền tố /api/v1: không còn context-path nên servlet
+                // container không tách phần này ra nữa (xem ApiPathConfig).
                 .requestMatchers(
                     HttpMethod.POST,
-                    "/auth/register",
-                    "/auth/login"
+                    API_PREFIX + "/auth/register",
+                    API_PREFIX + "/auth/login"
                 ).permitAll()
 
-                .requestMatchers(HttpMethod.GET, "/auth/me").authenticated()
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/auth/me").authenticated()
 
                 // Danh sách, chi tiết, ngày khởi hành và đánh giá của tour cho khách xem không cần đăng nhập.
                 .requestMatchers(HttpMethod.GET,
-                    "/tours", "/tours/*", "/tours/*/availability", "/tours/*/reviews").permitAll()
+                    API_PREFIX + "/tours", API_PREFIX + "/tours/*",
+                    API_PREFIX + "/tours/*/availability", API_PREFIX + "/tours/*/reviews").permitAll()
 
                 // Danh sách điểm đến & loại hình tour (cho dropdown lọc).
-                .requestMatchers(HttpMethod.GET, "/destinations", "/categories").permitAll()
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/destinations", API_PREFIX + "/categories").permitAll()
 
-                .requestMatchers(HttpMethod.POST, "/tours/*/reviews").authenticated()
+                .requestMatchers(HttpMethod.POST, API_PREFIX + "/tours/*/reviews").authenticated()
 
                 .requestMatchers(
                     HttpMethod.POST,
-                    "/bookings"
+                    API_PREFIX + "/bookings"
                 ).authenticated()
                 .requestMatchers(
                     HttpMethod.GET,
-                    "/bookings",
-                    "/bookings/*"
+                    API_PREFIX + "/bookings",
+                    API_PREFIX + "/bookings/*"
                 ).authenticated()
-                .requestMatchers(HttpMethod.PATCH, "/bookings/*/cancel").authenticated()
+                .requestMatchers(HttpMethod.PATCH, API_PREFIX + "/bookings/*/cancel").authenticated()
 
                 // Wishlist: toàn bộ đều là thao tác trên dữ liệu riêng của user đang đăng nhập.
-                .requestMatchers(HttpMethod.GET, "/wishlist").authenticated()
-                .requestMatchers(HttpMethod.POST, "/wishlist").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/wishlist/*").authenticated()
+                .requestMatchers(HttpMethod.GET, API_PREFIX + "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.POST, API_PREFIX + "/wishlist").authenticated()
+                .requestMatchers(HttpMethod.DELETE, API_PREFIX + "/wishlist/*").authenticated()
 
                 // Mọi endpoint chưa được liệt kê ở trên đều yêu cầu xác thực.
                 .anyRequest().authenticated()

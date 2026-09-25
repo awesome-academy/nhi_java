@@ -17,7 +17,7 @@ class RateLimitFilterTest {
     private HttpServletRequest authRequest(String ip) {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getMethod()).thenReturn("POST");
-        when(request.getServletPath()).thenReturn("/auth/login");
+        when(request.getServletPath()).thenReturn("/api/v1/auth/login");
         when(request.getHeader("X-Forwarded-For")).thenReturn(null);
         when(request.getRemoteAddr()).thenReturn(ip);
         return request;
@@ -59,9 +59,9 @@ class RateLimitFilterTest {
     void onlyRateLimitsPostAuthPaths() {
         RateLimitFilter filter = new RateLimitFilter(mock(SecurityErrorResponder.class), 20, 60);
 
-        assertThat(filter.shouldNotFilter(request("POST", "/auth/login"))).isFalse();
-        assertThat(filter.shouldNotFilter(request("POST", "/auth/register"))).isFalse();
-        assertThat(filter.shouldNotFilter(request("GET", "/auth/me"))).isTrue();
+        assertThat(filter.shouldNotFilter(request("POST", "/api/v1/auth/login"))).isFalse();
+        assertThat(filter.shouldNotFilter(request("POST", "/api/v1/auth/register"))).isFalse();
+        assertThat(filter.shouldNotFilter(request("GET", "/api/v1/auth/me"))).isTrue();
         assertThat(filter.shouldNotFilter(request("POST", "/tours/1/reviews"))).isTrue();
         assertThat(filter.shouldNotFilter(request("POST", "/bookings"))).isTrue();
     }

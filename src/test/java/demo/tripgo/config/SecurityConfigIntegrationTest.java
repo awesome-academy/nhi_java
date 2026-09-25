@@ -24,9 +24,11 @@ class SecurityConfigIntegrationTest {
     private MockMvc mvc;
 
     // Exists only in tests and deliberately has no matcher in SecurityConfig.
+    // Nam ngoai package demo.tripgo.controller nen ApiPathConfig khong gan tien to ho:
+    // phai tu khai /api/v1 de duong dan giong endpoint that.
     @RestController
     static class UnlistedController {
-        @GetMapping("/test/unlisted")
+        @GetMapping("/api/v1/test/unlisted")
         String unlisted() {
             return "protected";
         }
@@ -34,8 +36,7 @@ class SecurityConfigIntegrationTest {
 
     @Test
     void unlistedEndpointRequiresAuthentication() throws Exception {
-        mvc.perform(get("/api/v1/test/unlisted")
-                .contextPath("/api/v1").servletPath("/test/unlisted"))
+        mvc.perform(get("/api/v1/test/unlisted"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error.message").isNotEmpty());
     }
@@ -43,8 +44,7 @@ class SecurityConfigIntegrationTest {
     @Test
     @WithMockUser
     void authenticatedUserCanReachUnlistedEndpoint() throws Exception {
-        mvc.perform(get("/api/v1/test/unlisted")
-                .contextPath("/api/v1").servletPath("/test/unlisted"))
+        mvc.perform(get("/api/v1/test/unlisted"))
             .andExpect(status().isOk())
             .andExpect(content().string("protected"));
     }
@@ -53,7 +53,6 @@ class SecurityConfigIntegrationTest {
     @Test
     void corsPreflightIsAllowed() throws Exception {
         mvc.perform(options("/api/v1/tours")
-                .contextPath("/api/v1").servletPath("/tours")
                 .header("Origin", "http://localhost:3000")
                 .header("Access-Control-Request-Method", "GET"))
             .andExpect(status().isOk())

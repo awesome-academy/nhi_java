@@ -118,7 +118,7 @@ class BookingIntegrationTest {
     void createBookingGeneratesCodeComputesPriceAndDecrementsSeats() throws Exception {
         String token = tokenFor(saveUser());
 
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 2, 1)))
             .andExpect(status().isCreated())
@@ -135,7 +135,7 @@ class BookingIntegrationTest {
         assertThat(remainingSeatsOn(date)).isEqualTo(7);
 
         // Đơn xuất hiện ở GET /bookings (paginated) với tour gọn { title, thumbnail }.
-        mvc.perform(get("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(get("/api/v1/bookings")
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(1))
@@ -148,7 +148,7 @@ class BookingIntegrationTest {
 
     @Test
     void createBookingWithoutTokenReturns401() throws Exception {
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 2, 0)))
             .andExpect(status().isUnauthorized());
     }
@@ -161,7 +161,7 @@ class BookingIntegrationTest {
             {"date":"2000-01-01","adults":0,"children":-1,
              "contact":{"fullName":"","email":"not-an-email"}}
             """;
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(bad))
             .andExpect(status().isUnprocessableEntity())
@@ -181,7 +181,7 @@ class BookingIntegrationTest {
             {"tourId":%s,"date":"%s","adults":1,"children":0,
              "contact":{"fullName":"Nguyen A","email":"a@example.com","phone":"abc123","note":"gọi trước"}}
             """.formatted(tour.getId(), date);
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(bad))
             .andExpect(status().isUnprocessableEntity())
@@ -190,7 +190,7 @@ class BookingIntegrationTest {
 
     @Test
     void createBookingForUnknownTourReturns404() throws Exception {
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(body(999999L, date, 1, 0)))
             .andExpect(status().isNotFound())
@@ -199,7 +199,7 @@ class BookingIntegrationTest {
 
     @Test
     void createBookingOnDateWithoutDepartureReturns422() throws Exception {
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(tour.getId(), date.plusDays(1), 1, 0)))
@@ -212,7 +212,7 @@ class BookingIntegrationTest {
     @Test
     void createBookingWhenSoldOutReturns409() throws Exception {
         saveDeparture(date.plusDays(2), 2, 0); // chỉ 2 chỗ
-        mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(body(tour.getId(), date.plusDays(2), 2, 1))) // xin 3 chỗ
@@ -225,7 +225,7 @@ class BookingIntegrationTest {
     @Test
     void userCannotSeeOthersBooking() throws Exception {
         String tokenA = tokenFor(saveUser());
-        String location = mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        String location = mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenA)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 1, 0)))
             .andExpect(status().isCreated())
@@ -233,18 +233,18 @@ class BookingIntegrationTest {
         long bookingId = Long.parseLong(location.replaceAll(".*\"id\":(\\d+).*", "$1"));
 
         // User A xem được đơn của mình.
-        mvc.perform(get("/api/v1/bookings/" + bookingId).contextPath("/api/v1").servletPath("/bookings/" + bookingId)
+        mvc.perform(get("/api/v1/bookings/" + bookingId)
                 .header("Authorization", tokenA))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(bookingId));
 
         // User B không thấy → 404 (không lộ tồn tại).
-        mvc.perform(get("/api/v1/bookings/" + bookingId).contextPath("/api/v1").servletPath("/bookings/" + bookingId)
+        mvc.perform(get("/api/v1/bookings/" + bookingId)
                 .header("Authorization", tokenFor(saveUser())))
             .andExpect(status().isNotFound());
 
         // GET /bookings của B rỗng.
-        mvc.perform(get("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        mvc.perform(get("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser())))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isEmpty());
@@ -255,7 +255,7 @@ class BookingIntegrationTest {
     @Test
     void cancelBookingRestoresSeatsAndIsIdempotentlyGuarded() throws Exception {
         String token = tokenFor(saveUser());
-        String created = mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        String created = mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 2, 0)))
             .andExpect(status().isCreated())
@@ -263,7 +263,6 @@ class BookingIntegrationTest {
         long bookingId = Long.parseLong(created.replaceAll(".*\"id\":(\\d+).*", "$1"));
 
         mvc.perform(patch("/api/v1/bookings/" + bookingId + "/cancel")
-                .contextPath("/api/v1").servletPath("/bookings/" + bookingId + "/cancel")
                 .header("Authorization", token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("cancelled"));
@@ -273,7 +272,6 @@ class BookingIntegrationTest {
 
         // Huỷ lần nữa → 409.
         mvc.perform(patch("/api/v1/bookings/" + bookingId + "/cancel")
-                .contextPath("/api/v1").servletPath("/bookings/" + bookingId + "/cancel")
                 .header("Authorization", token))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.error.code").value("CONFLICT"));
@@ -281,7 +279,7 @@ class BookingIntegrationTest {
 
     @Test
     void cancelOthersBookingReturns404() throws Exception {
-        String created = mvc.perform(post("/api/v1/bookings").contextPath("/api/v1").servletPath("/bookings")
+        String created = mvc.perform(post("/api/v1/bookings")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(body(tour.getId(), date, 1, 0)))
             .andExpect(status().isCreated())
@@ -289,7 +287,6 @@ class BookingIntegrationTest {
         long bookingId = Long.parseLong(created.replaceAll(".*\"id\":(\\d+).*", "$1"));
 
         mvc.perform(patch("/api/v1/bookings/" + bookingId + "/cancel")
-                .contextPath("/api/v1").servletPath("/bookings/" + bookingId + "/cancel")
                 .header("Authorization", tokenFor(saveUser())))
             .andExpect(status().isNotFound());
     }

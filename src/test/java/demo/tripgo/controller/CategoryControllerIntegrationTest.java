@@ -50,7 +50,7 @@ class CategoryControllerIntegrationTest {
     // Public: dropdown lọc phải xem được khi chưa đăng nhập.
     @Test
     void listsAllCategoriesWithVietnameseLabelsWithoutToken() throws Exception {
-        mvc.perform(get("/api/v1/categories").contextPath("/api/v1").servletPath("/categories"))
+        mvc.perform(get("/api/v1/categories"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(6))
             .andExpect(jsonPath("$.data[0].slug").value("beach"))
@@ -63,7 +63,7 @@ class CategoryControllerIntegrationTest {
     @Test
     void everySlugIsAcceptedByTourCategoryFilter() throws Exception {
         for (String[] row : SEED) {
-            mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+            mvc.perform(get("/api/v1/tours")
                     .param("category", row[0]))
                 .andExpect(status().isOk());
         }
@@ -72,7 +72,7 @@ class CategoryControllerIntegrationTest {
     // slug không có trong bảng -> 400, không lặng lẽ trả danh sách rỗng.
     @Test
     void unknownCategorySlugReturns400() throws Exception {
-        mvc.perform(get("/api/v1/tours").contextPath("/api/v1").servletPath("/tours")
+        mvc.perform(get("/api/v1/tours")
                 .param("category", "khong-ton-tai"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));

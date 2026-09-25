@@ -1,5 +1,7 @@
 package demo.tripgo.security;
 
+import demo.tripgo.config.ApiPathConfig;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,12 +39,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.windowMillis = windowSeconds * 1000L;
     }
 
-    // Chỉ áp cho POST /auth/** (login/register); còn lại bỏ qua.
+    // Chỉ áp cho POST /api/v1/auth/** (login/register); còn lại bỏ qua.
+    // Tiền tố nằm trong đường dẫn vì ứng dụng không dùng context-path (xem ApiPathConfig).
+    private static final String AUTH_PATH_PREFIX = ApiPathConfig.API_PREFIX + "/auth/";
+
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
         return !("POST".equalsIgnoreCase(request.getMethod())
-            && path != null && path.startsWith("/auth/"));
+            && path != null && path.startsWith(AUTH_PATH_PREFIX));
     }
 
     @Override

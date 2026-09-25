@@ -61,7 +61,6 @@ class AuthControllerIntegrationTest {
         String token = jwtService.generateToken(user);
 
         mockMvc.perform(get("/api/v1/auth/me")
-                .contextPath("/api/v1").servletPath("/auth/me")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(user.getId()))
@@ -72,8 +71,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void meWithoutTokenReturns401() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/me")
-                .contextPath("/api/v1").servletPath("/auth/me"))
+        mockMvc.perform(get("/api/v1/auth/me"))
             .andExpect(status().isUnauthorized())
             // Thiếu token bị chặn ở entry-point của Spring Security -> code là tên HttpStatus,
             // khác với INVALID_CREDENTIALS (dành cho sai email/mật khẩu ở /auth/login).
@@ -87,8 +85,7 @@ class AuthControllerIntegrationTest {
         // Principal của @WithMockUser là UserDetails, không phải entity User, nên
         // @AuthenticationPrincipal User bind về null. Controller phải trả 401 ErrorResponse
         // thay vì để NullPointerException lọt ra format lỗi mặc định của Spring Boot.
-        mockMvc.perform(get("/api/v1/auth/me")
-                .contextPath("/api/v1").servletPath("/auth/me"))
+        mockMvc.perform(get("/api/v1/auth/me"))
             .andExpect(status().isUnauthorized())
             .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
             .andExpect(jsonPath("$.error.message").isNotEmpty());
@@ -99,7 +96,6 @@ class AuthControllerIntegrationTest {
         registerLoginUser("login-success@example.com");
 
         mockMvc.perform(post("/api/v1/auth/login")
-                .contextPath("/api/v1").servletPath("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"email":"login-success@example.com","password":"password123"}
@@ -116,7 +112,6 @@ class AuthControllerIntegrationTest {
 
         for (String email : new String[]{"login.mixed.case@example.com", "LOGIN.MIXED.CASE@EXAMPLE.COM"}) {
             mockMvc.perform(post("/api/v1/auth/login")
-                    .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {"email":"%s","password":"password123"}
@@ -138,7 +133,6 @@ class AuthControllerIntegrationTest {
         userRepository.saveAndFlush(user);
 
         mockMvc.perform(post("/api/v1/auth/login")
-                .contextPath("/api/v1").servletPath("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"email":"%s","password":"password123"}
@@ -152,7 +146,6 @@ class AuthControllerIntegrationTest {
 
     private void registerLoginUser(String email) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
-                .contextPath("/api/v1").servletPath("/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {"name":"Login Test","email":"%s","password":"password123"}
@@ -171,7 +164,6 @@ class AuthControllerIntegrationTest {
 
         for (String password : new String[]{"1", "1234567", "wrongpassword"}) {
             mockMvc.perform(post("/api/v1/auth/login")
-                    .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {"email":"short-login@example.com","password":"%s"}
@@ -191,7 +183,6 @@ class AuthControllerIntegrationTest {
                 "{\"email\":\"login@example.com\"}",
                 "{\"email\":\"login@example.com\",\"password\":\" \"}"}) {
             mockMvc.perform(post("/api/v1/auth/login")
-                    .contextPath("/api/v1").servletPath("/auth/login")
                     .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.fields.password").value("Mật khẩu không được để trống"));
@@ -205,8 +196,7 @@ class AuthControllerIntegrationTest {
             """;
 
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content(request.formatted("Mixed.Case@Example.com")))
             .andExpect(status().isCreated())
@@ -218,8 +208,7 @@ class AuthControllerIntegrationTest {
         assertThat(passwordEncoder.matches("12345678", savedUser.getPassword())).isTrue();
 
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content(request.formatted("MIXED.CASE@EXAMPLE.COM")))
             .andExpect(status().isConflict())
@@ -233,8 +222,7 @@ class AuthControllerIntegrationTest {
             """;
 
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content(request))
             .andExpect(status().isCreated());
@@ -243,8 +231,7 @@ class AuthControllerIntegrationTest {
         doReturn(false).when(userRepository).existsByEmail("race@example.com");
 
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content(request))
             .andExpect(status().isConflict())
@@ -261,8 +248,7 @@ class AuthControllerIntegrationTest {
     @MethodSource("oversizedPasswords")
     void rejectsPasswordsExceeding72Utf8Bytes(String password) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"name":"Nguyen Van An","email":"oversized@example.com","password":"%s"}
@@ -279,8 +265,7 @@ class AuthControllerIntegrationTest {
     @MethodSource("boundaryPasswords")
     void acceptsPasswordsAt72Utf8Bytes(String password) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"name":"Nguyen Van An","email":"boundary-%s@example.com","password":"%s"}
@@ -291,8 +276,7 @@ class AuthControllerIntegrationTest {
     @Test
     void rejectsInvalidFieldsWithoutSavingUser() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"name":" ","email":"invalid-email","password":"1234567"}
@@ -310,8 +294,7 @@ class AuthControllerIntegrationTest {
     @Test
     void registerIsPublicUnderApiV1BasePath() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
-            .contextPath("/api/v1")
-            .servletPath("/auth/register")
+            
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
