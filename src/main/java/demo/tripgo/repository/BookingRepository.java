@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -34,6 +36,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Optional<Booking> findWithDetailsById(Long id);
 
     long countByStatus(BookingStatus status);
+
+    long countByCreatedAtGreaterThanEqual(java.time.LocalDateTime from);
+
+    // Doanh thu tháng: chỉ tính đơn CHƯA huỷ. coalesce để tháng không có đơn nào trả 0 thay vì null.
+    @Query("""
+        select coalesce(sum(b.totalPrice), 0)
+        from Booking b
+        where b.status <> demo.tripgo.entity.BookingStatus.CANCELLED
+          and b.createdAt >= :from
+        """)
+    java.math.BigDecimal sumRevenueSince(@Param("from") java.time.LocalDateTime from);
 
     // Số đơn còn hiệu lực của một tour: dùng để cảnh báo admin trước khi xoá.
     long countByTourIdAndStatusNot(Long tourId, BookingStatus status);

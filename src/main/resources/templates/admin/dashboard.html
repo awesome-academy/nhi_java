@@ -8,23 +8,26 @@
 <main class="admin-content">
     <h1 class="page-title">Dashboard</h1>
 
-    <!--/* Số liệu còn là chỗ trống: sẽ nối vào TourService/BookingService ở giai đoạn sau. */-->
     <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-label">Tổng tour</span>
-            <span class="stat-value">—</span>
-        </div>
-        <div class="stat-card">
+        <a class="stat-card" th:href="@{/admin/tours}">
+            <span class="stat-label">Tổng tour đang bán</span>
+            <span class="stat-value" th:text="${stats.totalTours}">0</span>
+        </a>
+        <!--/* Bấm vào ô là sang thẳng danh sách đã lọc sẵn - đây là việc admin làm tiếp
+               ngay sau khi nhìn thấy con số. */-->
+        <a class="stat-card" th:href="@{/admin/bookings(status='PENDING')}">
             <span class="stat-label">Đơn chờ xác nhận</span>
-            <span class="stat-value">—</span>
-        </div>
-        <div class="stat-card">
+            <span class="stat-value" th:text="${stats.pendingBookings}">0</span>
+        </a>
+        <a class="stat-card" th:href="@{/admin/bookings}">
             <span class="stat-label">Đơn tháng này</span>
-            <span class="stat-value">—</span>
-        </div>
+            <span class="stat-value" th:text="${stats.bookingsThisMonth}">0</span>
+        </a>
         <div class="stat-card">
             <span class="stat-label">Doanh thu tháng</span>
-            <span class="stat-value">—</span>
+            <span class="stat-value"
+                  th:text="${#numbers.formatInteger(stats.revenueThisMonth, 0, 'POINT')} + ' đ'">0 đ</span>
+            <span class="stat-note">Không tính đơn đã huỷ</span>
         </div>
     </div>
 </main>

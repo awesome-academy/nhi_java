@@ -1,17 +1,24 @@
 package demo.tripgo.admin;
 
+import demo.tripgo.service.DashboardService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-// Khung dashboard của giai đoạn này: bố cục và điều hướng đã chạy, 4 ô số liệu sẽ được nối vào
-// dữ liệu thật ở giai đoạn sau (tổng tour, đơn chờ xác nhận, đơn tháng này, doanh thu tháng).
 @Controller
 public class AdminDashboardController {
+
+    private final DashboardService dashboardService;
+
+    public AdminDashboardController(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
 
     @GetMapping("/admin")
     public String dashboard(Model model) {
         model.addAttribute("activeMenu", "dashboard");
+        model.addAttribute("pageHeading", "Dashboard");
+        model.addAttribute("stats", dashboardService.stats());
         return "admin/dashboard";
     }
 }
