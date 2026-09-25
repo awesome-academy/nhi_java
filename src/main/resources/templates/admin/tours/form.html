@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title th:text="${form.id} != null ? 'Sửa tour · TripGo Admin' : 'Thêm tour · TripGo Admin'">Tour</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title" th:text="${pageHeading}">Thêm tour</h1>
+        <a th:href="@{/admin/tours}" class="btn-secondary">← Huỷ</a>
+    </div>
+
+    <!--/* Cùng một template cho tạo và sửa: khác nhau đúng ở URL gửi đi. */-->
+    <form th:object="${form}" method="post" enctype="multipart/form-data"
+          th:action="${form.id} != null ? @{/admin/tours/{id}(id=${form.id})} : @{/admin/tours}"
+          class="form-card" novalidate>
+
+        <!--/* Lỗi không gắn với ô nào cụ thể, ví dụ ảnh sai định dạng hoặc quá nặng. */-->
+        <div class="form-global-error" th:if="${#fields.hasGlobalErrors()}">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="title">Tên tour <span class="required">*</span></label>
+            <input type="text" id="title" th:field="*{title}" maxlength="200">
+            <p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="slug">Slug</label>
+            <input type="text" id="slug" th:field="*{slug}" maxlength="250"
+                   placeholder="để trống sẽ tự sinh từ tên tour">
+            <p class="field-hint">Phần định danh trên URL công khai, ví dụ <code>da-nang-3n2d</code>.</p>
+            <p class="field-error" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}">Lỗi</p>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="destinationId">Điểm đến <span class="required">*</span></label>
+                <select id="destinationId" th:field="*{destinationId}">
+                    <option value="">— Chọn điểm đến —</option>
+                    <option th:each="d : ${destinations}" th:value="${d.id}" th:text="${d.name}">Đà Nẵng</option>
+                </select>
+                <p class="field-error" th:if="${#fields.hasErrors('destinationId')}"
+                   th:errors="*{destinationId}">Lỗi</p>
+            </div>
+
+            <div class="form-row">
+                <label for="categoryId">Loại hình <span class="required">*</span></label>
+                <select id="categoryId" th:field="*{categoryId}">
+                    <option value="">— Chọn loại hình —</option>
+                    <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}">Biển đảo</option>
+                </select>
+                <p class="field-error" th:if="${#fields.hasErrors('categoryId')}"
+                   th:errors="*{categoryId}">Lỗi</p>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="price">Giá (đ) <span class="required">*</span></label>
+                <input type="number" id="price" th:field="*{price}" min="0" step="1000">
+                <p class="field-error" th:if="${#fields.hasErrors('price')}" th:errors="*{price}">Lỗi</p>
+            </div>
+
+            <div class="form-row">
+                <label for="discountPrice">Giá khuyến mãi (đ)</label>
+                <input type="number" id="discountPrice" th:field="*{discountPrice}" min="0" step="1000">
+                <p class="field-error" th:if="${#fields.hasErrors('discountPrice')}"
+                   th:errors="*{discountPrice}">Lỗi</p>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="durationDays">Thời lượng (ngày) <span class="required">*</span></label>
+                <input type="number" id="durationDays" th:field="*{durationDays}" min="1" max="365">
+                <p class="field-error" th:if="${#fields.hasErrors('durationDays')}"
+                   th:errors="*{durationDays}">Lỗi</p>
+            </div>
+
+            <div class="form-row">
+                <label for="maxGuests">Số khách tối đa <span class="required">*</span></label>
+                <input type="number" id="maxGuests" th:field="*{maxGuests}" min="1" max="1000">
+                <p class="field-error" th:if="${#fields.hasErrors('maxGuests')}"
+                   th:errors="*{maxGuests}">Lỗi</p>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="thumbnailFile">Ảnh đại diện</label>
+
+            <!--/* Giữ URL ảnh hiện tại qua hidden field: không có nó, lần lưu sau sẽ mất ảnh cũ
+                   khi admin không chọn file mới. */-->
+            <input type="hidden" th:field="*{thumbnailUrl}">
+
+            <div class="thumb-current" th:if="*{thumbnailUrl}">
+                <img th:src="*{thumbnailUrl}" alt="Ảnh đại diện hiện tại">
+                <label class="checkbox-inline">
+                    <input type="checkbox" th:field="*{removeThumbnail}"> Gỡ ảnh này
+                </label>
+            </div>
+
+            <input type="file" id="thumbnailFile" th:field="*{thumbnailFile}" accept="image/*">
+            <p class="field-hint">JPG, PNG, WEBP hoặc GIF, tối đa 5 MB. Chọn file mới sẽ thay ảnh cũ.</p>
+            <p class="field-error" th:if="${#fields.hasErrors('thumbnailUrl')}"
+               th:errors="*{thumbnailUrl}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="galleryFiles">Ảnh gallery</label>
+
+            <div class="gallery-grid" th:if="${!#lists.isEmpty(form.existingImageUrls)}">
+                <div class="gallery-item" th:each="url : ${form.existingImageUrls}">
+                    <img th:src="${url}" alt="Ảnh tour">
+                    <!--/* Tick = giữ lại. Bỏ tick rồi lưu là ảnh bị gỡ khỏi tour. */-->
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="keepImageUrls" th:value="${url}"
+                               th:checked="${form.keepImageUrls.contains(url)}"> Giữ
+                    </label>
+                </div>
+            </div>
+
+            <input type="file" id="galleryFiles" name="galleryFiles" accept="image/*" multiple>
+            <p class="field-hint">Chọn nhiều ảnh cùng lúc để thêm vào gallery.</p>
+        </div>
+
+        <div class="form-row">
+            <label for="description">Mô tả</label>
+            <textarea id="description" th:field="*{description}" rows="6"></textarea>
+        </div>
+
+        <fieldset class="itinerary">
+            <legend>Lịch trình</legend>
+
+            <div id="itinerary-rows">
+                <!--/* data-index để JS đánh lại tên trường sau khi xoá dòng giữa; Spring bind theo
+                       chỉ số liên tục itinerary[0], itinerary[1]... nên không được để đứt quãng. */-->
+                <div class="itinerary-row" th:each="day, stat : *{itinerary}" th:data-index="${stat.index}">
+                    <span class="day-label" th:text="'Ngày ' + ${stat.count}">Ngày 1</span>
+                    <input type="text" th:field="*{itinerary[__${stat.index}__].title}"
+                           placeholder="Tiêu đề trong ngày" maxlength="200">
+                    <textarea th:field="*{itinerary[__${stat.index}__].description}"
+                              placeholder="Nội dung" rows="2"></textarea>
+                    <button type="button" class="btn-link danger remove-day">Xoá</button>
+                </div>
+            </div>
+
+            <button type="button" id="add-day" class="btn-secondary">+ Thêm ngày</button>
+            <p class="field-hint">Dòng để trống sẽ bị bỏ qua khi lưu. Số ngày tự đánh lại theo thứ tự.</p>
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Lưu</button>
+            <a th:href="@{/admin/tours}" class="btn-secondary">Huỷ</a>
+        </div>
+    </form>
+
+</main>
+<script th:src="@{/js/admin-itinerary.js}"></script>
+</body>
+</html>

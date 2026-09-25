@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Thùng rác · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Thùng rác <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+        <a th:href="@{/admin/tours}" class="btn-secondary">← Về danh sách tour</a>
+    </div>
+
+    <p class="hint">
+        Tour ở đây đã bị ẩn khỏi trang bán và API công khai, nhưng dữ liệu vẫn còn nguyên —
+        đơn đặt và đánh giá cũ không bị ảnh hưởng. Khôi phục là tour hiện lại như trước.
+    </p>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tên tour</th>
+            <th>Điểm đến</th>
+            <th>Xoá lúc</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="tour : ${tours}">
+            <td th:text="${tour.id}">1</td>
+            <td th:text="${tour.title}">Tên tour</td>
+            <td th:text="${tour.destination}">Điểm đến</td>
+            <td th:text="${#temporals.format(tour.deletedAt, 'HH:mm dd/MM/yyyy')}">—</td>
+            <td>
+                <form th:action="@{/admin/tours/{id}/restore(id=${tour.id})}" method="post"
+                      class="inline-form">
+                    <button type="submit" class="btn-link">Khôi phục</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${tours.isEmpty()}">
+            <td colspan="5" class="empty-row">Thùng rác trống</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <nav class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}" th:href="@{/admin/tours/trash(page=${currentPage - 1})}">‹</a>
+        <span th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <a th:href="@{/admin/tours/trash(page=${p})}" th:text="${p}"
+               th:classappend="${p == currentPage} ? 'current'">1</a>
+        </span>
+        <a th:if="${currentPage < totalPages}" th:href="@{/admin/tours/trash(page=${currentPage + 1})}">›</a>
+    </nav>
+
+</main>
+</body>
+</html>

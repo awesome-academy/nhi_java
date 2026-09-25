@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Tour · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Tour <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+        <span class="header-actions">
+            <a th:href="@{/admin/tours/trash}" class="btn-secondary">Thùng rác</a>
+            <a th:href="@{/admin/tours/new}" class="btn-primary">+ Thêm tour</a>
+        </span>
+    </div>
+
+    <!--/* GET để trang kết quả tìm kiếm chia sẻ/bookmark được bằng URL. */-->
+    <form th:action="@{/admin/tours}" method="get" class="search-bar">
+        <input type="search" name="q" th:value="${q}" placeholder="Tìm theo tên tour...">
+        <button type="submit">Tìm</button>
+        <a th:if="${q != null and !q.isEmpty()}" th:href="@{/admin/tours}" class="search-clear">Xoá lọc</a>
+    </form>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tên tour</th>
+            <th>Điểm đến</th>
+            <th class="num">Giá</th>
+            <th class="num">Số ngày</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="tour : ${tours}">
+            <td th:text="${tour.id}">1</td>
+            <td th:text="${tour.title}">Tên tour</td>
+            <td th:text="${tour.destination}">Điểm đến</td>
+            <td class="num" th:text="${#numbers.formatInteger(tour.price, 0, 'POINT')}">0</td>
+            <td class="num" th:text="${tour.durationDays}">0</td>
+            <td>
+                <a th:href="@{/admin/tours/{id}/edit(id=${tour.id})}" class="btn-link">Sửa</a>
+                <!--/* Xoá phải là POST + CSRF; xác nhận trước khi gửi để tránh bấm nhầm. */-->
+                <form th:action="@{/admin/tours/{id}/delete(id=${tour.id})}" method="post"
+                      class="inline-form"
+                      onsubmit="return confirm('Xoá tour này? Tour sẽ chuyển vào thùng rác.');">
+                    <button type="submit" class="btn-link danger">Xoá</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${tours.isEmpty()}">
+            <td colspan="6" class="empty-row"
+                th:text="${q != null and !q.isEmpty()}
+                         ? 'Không tìm thấy tour nào khớp từ khoá'
+                         : 'Chưa có tour nào'">Chưa có tour nào</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!--/* Giữ lại từ khoá khi chuyển trang, nếu không thì sang trang 2 là mất bộ lọc. */-->
+    <nav class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/admin/tours(q=${q}, page=${currentPage - 1})}">‹</a>
+        <span th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <a th:href="@{/admin/tours(q=${q}, page=${p})}"
+               th:text="${p}"
+               th:classappend="${p == currentPage} ? 'current'">1</a>
+        </span>
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/admin/tours(q=${q}, page=${currentPage + 1})}">›</a>
+    </nav>
+
+</main>
+</body>
+</html>
