@@ -43,6 +43,12 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
         countQuery = "select count(t) from Tour t where t.deletedAt is not null")
     Page<Tour> findDeleted(Pageable pageable);
 
+    // Dữ liệu có từ trước khi thêm cột tìm kiếm; SearchTextBackfill điền nốt lúc khởi động.
+    java.util.List<Tour> findBySearchTextIsNull();
+
+    // Đếm tour đang trỏ tới một file ảnh (kể cả tour trong thùng rác: khôi phục xong vẫn cần ảnh).
+    long countByThumbnailUrl(String thumbnailUrl);
+
     // Tổng số tour đang bán (không tính tour trong thùng rác) — số liệu cho dashboard.
     long countByDeletedAtIsNull();
 

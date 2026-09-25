@@ -41,19 +41,22 @@ public class TourAdminService {
     private final DestinationRepository destinationRepository;
     private final CategoryRepository categoryRepository;
     private final FileStorageService fileStorageService;
+    private final ImageCleanupService imageCleanupService;
 
     public TourAdminService(
         TourRepository tourRepository,
         BookingRepository bookingRepository,
         DestinationRepository destinationRepository,
         CategoryRepository categoryRepository,
-        FileStorageService fileStorageService
+        FileStorageService fileStorageService,
+        ImageCleanupService imageCleanupService
     ) {
         this.tourRepository = tourRepository;
         this.bookingRepository = bookingRepository;
         this.destinationRepository = destinationRepository;
         this.categoryRepository = categoryRepository;
         this.fileStorageService = fileStorageService;
+        this.imageCleanupService = imageCleanupService;
     }
 
     // ---- Tạo / sửa ----
@@ -134,11 +137,11 @@ public class TourAdminService {
 
         String uploaded = fileStorageService.store(form.getThumbnailFile());
         if (uploaded != null) {
-            fileStorageService.delete(current);
+            imageCleanupService.deleteIfUnused(current);
             return uploaded;
         }
         if (form.isRemoveThumbnail()) {
-            fileStorageService.delete(current);
+            imageCleanupService.deleteIfUnused(current);
             return null;
         }
         return current != null ? current : blankToNull(form.getThumbnailUrl());
@@ -151,7 +154,7 @@ public class TourAdminService {
         List<TourImage> removed = tour.getImages().stream()
             .filter(image -> !keep.contains(image.getUrl()))
             .toList();
-        removed.forEach(image -> fileStorageService.delete(image.getUrl()));
+        removed.forEach(image -> imageCleanupService.deleteIfUnused(image.getUrl()));
         tour.getImages().removeAll(removed);
 
         if (form.getGalleryFiles() != null) {

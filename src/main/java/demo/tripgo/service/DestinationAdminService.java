@@ -28,35 +28,25 @@ public class DestinationAdminService {
     private final DestinationRepository destinationRepository;
     private final TourRepository tourRepository;
     private final FileStorageService fileStorageService;
+    private final ImageCleanupService imageCleanupService;
 
     public DestinationAdminService(
         DestinationRepository destinationRepository,
         TourRepository tourRepository,
-        FileStorageService fileStorageService
+        FileStorageService fileStorageService,
+        ImageCleanupService imageCleanupService
     ) {
         this.destinationRepository = destinationRepository;
         this.tourRepository = tourRepository;
         this.fileStorageService = fileStorageService;
+        this.imageCleanupService = imageCleanupService;
     }
 
     @Transactional(readOnly = true)
     public Page<AdminDestinationRow> list(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by("name"));
-        return destinationRepository.findActiveWithTourCount(likePattern(keyword), pageable)
+        return destinationRepository.findActiveWithTourCount(SearchText.likePattern(keyword), pageable)
             .map(this::toRow);
-    }
-
-    // Không lọc -> '%' khớp mọi tên. Escape \, %, _ để chúng là ký tự thường chứ không phải
-    // wildcard: gõ "50%" vào ô tìm kiếm không được biến thành "khớp tất cả".
-    private String likePattern(String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return "%";
-        }
-        String escaped = keyword.trim()
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_");
-        return "%" + escaped + "%";
     }
 
     @Transactional(readOnly = true)
@@ -139,11 +129,11 @@ public class DestinationAdminService {
 
         String uploaded = fileStorageService.store(form.getImageFile());
         if (uploaded != null) {
-            fileStorageService.delete(current);
+            imageCleanupService.deleteIfUnused(current);
             return uploaded;
         }
         if (form.isRemoveImage()) {
-            fileStorageService.delete(current);
+            imageCleanupService.deleteIfUnused(current);
             return null;
         }
         return current != null ? current : blankToNull(form.getImage());

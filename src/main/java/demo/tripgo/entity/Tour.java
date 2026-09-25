@@ -1,5 +1,6 @@
 package demo.tripgo.entity;
 
+import demo.tripgo.service.SearchText;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -122,6 +123,13 @@ public class Tour {
     @Setter
     private LocalDateTime deletedAt;
 
+    // Dạng không dấu của title + description, dùng cho tìm kiếm: gõ "da nang" vẫn ra "Đà Nẵng".
+    // Tự tính ở @PrePersist/@PreUpdate nên không thể quên cập nhật khi sửa tour.
+    // Không dùng unaccent() của Postgres vì H2 trong test không có hàm đó, và bật extension cần
+    // quyền superuser — cột chuẩn hoá chạy được ở mọi loại DB.
+    @Column(name = "search_text", columnDefinition = "text")
+    private String searchText;
+
     public boolean isDeleted() {
         return deletedAt != null;
     }
@@ -132,10 +140,16 @@ public class Tour {
         LocalDateTime now = LocalDateTime.now();
         createdAt = now;
         updatedAt = now;
+        refreshSearchText();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        refreshSearchText();
+    }
+
+    public void refreshSearchText() {
+        searchText = SearchText.normalize(title, description);
     }
 }

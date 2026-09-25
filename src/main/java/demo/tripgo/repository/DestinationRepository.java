@@ -32,13 +32,13 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
         from Destination d
         left join Tour t on t.destination = d and t.deletedAt is null
         where d.deletedAt is null
-          and lower(d.name) like lower(:pattern) escape '\\'
+          and d.searchName like :pattern escape '\\'
         group by d.id, d.name, d.slug, d.image, d.deletedAt
         """,
         countQuery = """
             select count(d) from Destination d
             where d.deletedAt is null
-              and lower(d.name) like lower(:pattern) escape '\\'
+              and d.searchName like :pattern escape '\\'
             """)
     Page<AdminDestinationView> findActiveWithTourCount(
         @Param("pattern") String pattern, Pageable pageable);
@@ -52,6 +52,10 @@ public interface DestinationRepository extends JpaRepository<Destination, Long> 
         """,
         countQuery = "select count(d) from Destination d where d.deletedAt is not null")
     Page<AdminDestinationView> findDeletedForAdmin(Pageable pageable);
+
+    long countByImage(String image);
+
+    List<Destination> findBySearchNameIsNull();
 
     // Slug unique tính trên toàn bảng, kể cả hàng đã xoá mềm -> không lọc deletedAt ở đây.
     boolean existsBySlugAndIdNot(String slug, Long id);

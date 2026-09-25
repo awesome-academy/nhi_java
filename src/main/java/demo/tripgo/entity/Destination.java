@@ -1,5 +1,6 @@
 package demo.tripgo.entity;
 
+import demo.tripgo.service.SearchText;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,6 +39,16 @@ public class Destination {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    // Dạng không dấu của tên, dùng cho tìm kiếm (xem Tour.searchText).
+    @Column(name = "search_name", length = 300)
+    private String searchName;
+
+    @PrePersist
+    @PreUpdate
+    void refreshSearchName() {
+        searchName = SearchText.normalize(name);
     }
 
 }

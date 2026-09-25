@@ -2,6 +2,7 @@ package demo.tripgo.repository;
 
 import demo.tripgo.dto.request.TourFilter;
 import demo.tripgo.entity.Tour;
+import demo.tripgo.service.SearchText;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -9,14 +10,10 @@ import org.springframework.data.jpa.domain.Specification;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 // Dựng điều kiện lọc động cho danh sách tour. Mỗi filter chỉ thêm predicate khi có giá trị,
 // nên toàn bộ việc lọc chạy ở DB (không tải hết rồi lọc trong bộ nhớ).
 public final class TourSpecifications {
-
-    // Ký tự escape dùng cho các pattern LIKE khi search theo từ khoá.
-    private static final char LIKE_ESCAPE_CHAR = '\\';
 
     private TourSpecifications() {
     }
@@ -41,13 +38,13 @@ public final class TourSpecifications {
             predicates.add(cb.isNull(root.get("deletedAt")));
 
             if (hasText(filter.q())) {
-                // Escape \, %, _ để chúng được hiểu là ký tự literal, không phải wildcard của LIKE.
-                String escaped = escapeLike(filter.q().trim().toLowerCase(Locale.ROOT));
-                String pattern = "%" + escaped + "%";
-                predicates.add(cb.or(
-                    cb.like(cb.lower(root.get("title")), pattern, LIKE_ESCAPE_CHAR),
-                    cb.like(cb.lower(root.get("description")), pattern, LIKE_ESCAPE_CHAR)
-                ));
+                // Tìm trên cột searchText (dạng không dấu của title + description) để gõ "da nang"
+                // vẫn ra "Đà Nẵng". Từ khoá chuẩn hoá bằng ĐÚNG hàm đã dùng lúc lưu, và vẫn escape
+                // % _ để chúng là ký tự thường chứ không phải wildcard.
+                predicates.add(cb.like(
+                    root.get("searchText"),
+                    SearchText.likePattern(filter.q()),
+                    SearchText.LIKE_ESCAPE_CHAR));
             }
             if (hasText(filter.destination())) {
                 predicates.add(cb.equal(destination.get("slug"), filter.destination().trim()));
@@ -74,13 +71,5 @@ public final class TourSpecifications {
 
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
-    }
-
-    // Escape ký tự đặc biệt của LIKE. Phải xử lý '\' trước để không escape lại chính escape char.
-    private static String escapeLike(String value) {
-        return value
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_");
     }
 }

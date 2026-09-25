@@ -334,4 +334,17 @@ class TourControllerIntegrationTest {
             return categories.save(c);
         });
     }
+    // Tìm không dấu: gõ "da nang" phải ra tour "Đà Nẵng ..." (trước đây ra 0 kết quả).
+    @Test
+    void searchIgnoresDiacritics() throws Exception {
+        saveTour("Đà Nẵng 3N2Đ", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+        saveTour("Sapa san may", daNang, category("beach", "Biển đảo"), 3, "100", 4.0);
+
+        for (String keyword : new String[] {"da nang", "Đà Nẵng", "DA NANG", "nang"}) {
+            mvc.perform(get("/api/v1/tours").param("q", keyword))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.data[0].title").value("Đà Nẵng 3N2Đ"));
+        }
+    }
 }

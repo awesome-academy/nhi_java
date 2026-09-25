@@ -182,6 +182,43 @@ class AdminTourUploadItineraryIntegrationTest {
         assertThat(fileFor(dropped)).doesNotExist();
     }
 
+    // Nhiều bản ghi trỏ chung một file (dữ liệu gán bằng script): thay ảnh của MỘT tour không
+    // được xoá file mà các tour khác vẫn đang dùng.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void sharedImageIsKeptWhenOtherRecordsStillUseIt() throws Exception {
+        mvc.perform(newTour().file(image("thumbnailFile", "image/jpeg")));
+        Tour first = tours.findAll().getFirst();
+        String shared = first.getThumbnailUrl();
+
+        // Tour thứ hai dùng chung đúng file đó.
+        mvc.perform(newTour().param("slug", "tour-hai").param("thumbnailUrl", shared));
+        assertThat(tours.count()).isEqualTo(2);
+
+        // Gỡ ảnh của tour thứ nhất -> file phải còn, vì tour thứ hai vẫn dùng.
+        mvc.perform(editTour(first.getId())
+            .param("thumbnailUrl", shared)
+            .param("removeThumbnail", "true"));
+
+        assertThat(tours.findById(first.getId()).orElseThrow().getThumbnailUrl()).isNull();
+        assertThat(fileFor(shared)).exists();
+    }
+
+    // Ngược lại: chỉ còn mình nó dùng thì xoá file như cũ, không để rác lại trên đĩa.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void soleReferenceStillDeletesTheFile() throws Exception {
+        mvc.perform(newTour().file(image("thumbnailFile", "image/jpeg")));
+        Tour only = tours.findAll().getFirst();
+        String url = only.getThumbnailUrl();
+
+        mvc.perform(editTour(only.getId())
+            .param("thumbnailUrl", url)
+            .param("removeThumbnail", "true"));
+
+        assertThat(fileFor(url)).doesNotExist();
+    }
+
     // ---- Lịch trình ----
 
     @Test
