@@ -1,6 +1,5 @@
 package demo.tripgo.security;
 
-import demo.tripgo.entity.AuthProvider;
 import demo.tripgo.entity.Role;
 import demo.tripgo.entity.User;
 import demo.tripgo.entity.UserStatus;
@@ -115,7 +114,7 @@ public class SocialLoginUserService implements OAuth2UserService<OAuth2UserReque
     // Chỉ gắn vào tài khoản LOCAL. Nếu email đã thuộc một tài khoản Facebook khác (user đổi email
     // bên Facebook rồi đăng nhập bằng tài khoản mới) thì dừng, không cướp tài khoản của người khác.
     private User claimLocalAccount(User existing, String email) {
-        if (existing.getProvider() != AuthProvider.LOCAL) {
+        if (!existing.isLocalAccount()) {
             throw new OAuth2AuthenticationException(new OAuth2Error(
                 "email_already_linked",
                 "Email " + email + " đã gắn với một tài khoản Facebook khác", null));

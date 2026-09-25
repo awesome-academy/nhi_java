@@ -33,9 +33,12 @@ public class User {
     @Setter
     private String password;
 
-    // Mặc định LOCAL để user đăng ký bằng email vẫn đúng ngay cả khi mapper không set.
+    // Cột để NULL được, không phải nullable = false: ddl-auto=update KHÔNG thêm được cột NOT NULL
+    // vào bảng đã có dữ liệu (Postgres từ chối, Hibernate chỉ log WARN rồi chạy tiếp — hậu quả là
+    // cột không tồn tại và mọi truy vấn users đều hỏng).
+    // Hàng cũ mang NULL và được hiểu là LOCAL; hàng mới luôn có giá trị nhờ default bên dưới.
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(length = 20)
     @Setter
     private AuthProvider provider = AuthProvider.LOCAL;
 
@@ -70,6 +73,11 @@ public class User {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // NULL = dữ liệu có từ trước khi thêm cột, coi như tài khoản email/mật khẩu.
+    public boolean isLocalAccount() {
+        return provider == null || provider == AuthProvider.LOCAL;
+    }
 
     @PrePersist
     protected void onCreate() {

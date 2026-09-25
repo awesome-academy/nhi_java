@@ -14,6 +14,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
 
+    // Tài khoản có từ trước khi thêm cột provider; UserProviderBackfill điền nốt lúc khởi động.
+    java.util.List<User> findByProviderIsNull();
+
     // Khoá nhận dạng của tài khoản social: id Facebook không đổi kể cả khi user đổi tên/email.
     Optional<User> findByProviderAndProviderId(AuthProvider provider, String providerId);
 

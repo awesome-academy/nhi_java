@@ -106,6 +106,13 @@ Bỏ trống `FACEBOOK_CLIENT_ID` thì tính năng không được bật và ứ
 Khai trong app Facebook (App settings → Basic) và thêm **Valid OAuth Redirect URI**:
 `http://localhost:8080/login/oauth2/code/facebook`
 
+> **Database đã có dữ liệu thì phải chạy migration trước:**
+> ```bash
+> psql -h localhost -p 5432 -U postgres -d tripgo -f scripts/migrate-social-login.sql
+> ```
+> `ddl-auto=update` không gỡ được ràng buộc `NOT NULL` khỏi cột `password` (tài khoản Facebook
+> không có mật khẩu). Bỏ qua bước này thì tạo tài khoản Facebook sẽ lỗi ở tầng DB.
+
 Xong luồng, TripGo đổi sang **JWT của chính nó** để client dùng chung một loại token cho mọi
 endpoint. Đặt `OAUTH2_SUCCESS_REDIRECT_URI` thì callback redirect về đó kèm `?token=`; bỏ trống
 thì trả thẳng JSON `{ token, user }` như `POST /auth/login`.
@@ -113,6 +120,19 @@ thì trả thẳng JSON `{ token, user }` như `POST /auth/login`.
 Tài khoản Facebook không có mật khẩu, nên `POST /auth/login` với email đó trả 401 kèm lời nhắn
 dùng đăng nhập Facebook. Nếu email đã có tài khoản email/mật khẩu, Facebook được **gắn vào chính
 tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
+
+---
+
+## 2d. Xuất Excel
+
+| Trang | Nút | Nội dung |
+|---|---|---|
+| `/admin/bookings` | Xuất Excel | Đơn theo **đúng bộ lọc đang xem** |
+| `/admin/tours` | Xuất Excel | Tour theo từ khoá đang tìm |
+| `/admin` | Xuất doanh thu tháng | Doanh thu gộp theo tour, bỏ qua đơn đã huỷ |
+
+Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
+`ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
 ---
 
