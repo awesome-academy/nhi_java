@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<!--/* Không hiển thị stack trace hay thông điệp nội bộ: người dùng không cần, mà lộ ra lại rủi ro. */-->
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lỗi hệ thống · TripGo</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="login-body">
+<div class="login-card error-card">
+    <p class="error-status">500</p>
+    <h1 class="error-title">Có lỗi xảy ra</h1>
+    <p class="error-hint">Vui lòng thử lại. Nếu vẫn lỗi, xem log máy chủ để biết chi tiết.</p>
+    <a th:if="${path != null and #strings.startsWith(path, '/admin')}"
+       th:href="@{/admin}" class="error-link">← Về Dashboard</a>
+</div>
+</body>
+</html>

@@ -4,7 +4,9 @@ REST API đặt tour du lịch: tìm kiếm/lọc tour, xem chi tiết & ngày k
 đánh giá tour. Xây bằng **Spring Boot 4.1 / Java 21 / PostgreSQL**, xác thực **JWT**.
 
 - Base URL: `http://localhost:8080/api/v1`
-- Swagger UI: `http://localhost:8080/api/v1/swagger-ui.html` (tắt ở profile `prod`)
+- Swagger UI: `http://localhost:8080/swagger-ui.html` (tắt ở profile `prod`)
+- Ứng dụng không dùng `context-path`: tiền tố `/api/v1` do `ApiPathConfig` gắn riêng cho
+  package `demo.tripgo.controller`, để khu quản trị `/admin/**` nằm ngoài tiền tố đó.
 - Bộ request mẫu: [`docs/api.http`](docs/api.http)
 
 ---
@@ -63,6 +65,33 @@ Message trả về bằng tiếng Việt. `code` dùng tên `HttpStatus`, trừ 
 `fields` chỉ xuất hiện ở lỗi bean-validation. Status dùng: 200/201 · 400 sai kiểu tham số ·
 401 chưa xác thực · 403 thiếu quyền · 404 không tồn tại **hoặc không sở hữu** · 409 xung đột
 (trùng email/đánh giá, hết chỗ, huỷ đơn đã huỷ) · 422 lỗi validate · 429 vượt rate limit.
+
+## 2b. Khu quản trị (giao diện)
+
+Trang quản trị render phía server bằng Thymeleaf, tách hẳn khỏi API:
+
+| | API `/api/v1/**` | Quản trị `/admin/**` |
+|---|---|---|
+| Xác thực | Bearer JWT | form đăng nhập + session |
+| CSRF | tắt (không dùng cookie) | **bật** |
+| Quyền | theo từng endpoint | `hasRole('ADMIN')` |
+
+Hai `SecurityFilterChain` riêng biệt (`SecurityConfig` và `AdminSecurityConfig`), phân biệt bằng
+`securityMatcher`, nên thay đổi ở khu quản trị không ảnh hưởng API.
+
+| Đường dẫn | Mô tả |
+|---|---|
+| `/admin/login` | Đăng nhập (công khai) |
+| `/admin` | Dashboard |
+| `/admin/logout` | Đăng xuất (POST, có token CSRF) |
+
+**Tạo tài khoản admin đầu tiên:** đặt `ADMIN_EMAIL` và `ADMIN_PASSWORD` trong `.env` rồi khởi động
+lại. Tài khoản chỉ được **tạo mới**, không bao giờ ghi đè tài khoản đã tồn tại — đổi biến môi
+trường sẽ không đổi mật khẩu admin đang dùng.
+
+Giao diện dùng Bootstrap 5 (CDN) + `src/main/resources/static/css/admin.css`.
+
+---
 
 ## 3. Chạy bằng Docker (khuyến nghị)
 
@@ -132,7 +161,7 @@ Mở [`docs/api.http`](docs/api.http) trong IntelliJ IDEA (HTTP Client) hoặc V
 (extension *REST Client*) rồi bấm **Send Request**. File phủ đủ 17 endpoint kèm các case lỗi
 (401/403/404/409/422/429); token được gán tự động sau request đăng nhập.
 
-Hoặc dùng Swagger UI tại `/api/v1/swagger-ui.html`.
+Hoặc dùng Swagger UI tại `/swagger-ui.html`.
 
 ## 7. Kiểm thử
 
