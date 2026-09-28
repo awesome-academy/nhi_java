@@ -4,8 +4,10 @@ import demo.tripgo.admin.AdminBookingRow;
 import demo.tripgo.entity.Booking;
 import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.exception.InvalidBookingRequestException;
+import demo.tripgo.event.BookingEvent;
 import demo.tripgo.exception.ResourceNotFoundException;
 import demo.tripgo.repository.BookingRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,10 +22,16 @@ public class BookingAdminService {
 
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
+    private final ApplicationEventPublisher events;
 
-    public BookingAdminService(BookingRepository bookingRepository, BookingService bookingService) {
+    public BookingAdminService(
+        BookingRepository bookingRepository,
+        BookingService bookingService,
+        ApplicationEventPublisher events
+    ) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
+        this.events = events;
     }
 
     @Transactional(readOnly = true)
@@ -52,6 +60,7 @@ public class BookingAdminService {
 
         // Không đụng tới số chỗ: chỗ đã bị trừ ngay lúc khách đặt, xác nhận chỉ đổi trạng thái.
         booking.setStatus(BookingStatus.CONFIRMED);
+        events.publishEvent(BookingEvent.of(BookingEvent.Kind.CONFIRMED, booking));
         return booking;
     }
 

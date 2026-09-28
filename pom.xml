@@ -44,6 +44,12 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<!-- Báo realtime cho khu quản trị khi có đơn mới hoặc đơn đổi trạng thái. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
 		<!-- Đọc/ghi file Excel cho chức năng nhập-xuất ở khu quản trị. -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>

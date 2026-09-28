@@ -139,6 +139,21 @@ class AdminSecurityIntegrationTest {
             .andExpect(redirectedUrl("/admin/login?logout"));
     }
 
+    // Endpoint WebSocket nằm trong /admin nên phải được chain quản trị bảo vệ: đặt ở ngoài thì
+    // ai cũng nghe được thông tin đơn hàng của khách.
+    @Test
+    void websocketEndpointRequiresAdmin() throws Exception {
+        mvc.perform(get("/admin/ws"))
+            .andExpect(redirectedUrl("/admin/login"));
+    }
+
+    @Test
+    @WithMockUser(username = USER_EMAIL, roles = "USER")
+    void websocketEndpointDeniesNormalUser() throws Exception {
+        mvc.perform(get("/admin/ws"))
+            .andExpect(redirectedUrl("/admin/login?denied"));
+    }
+
     // ---- Khu quản trị không được ảnh hưởng tới API ----
 
     @Test

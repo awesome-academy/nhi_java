@@ -134,6 +134,21 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
+## 2g. Thông báo realtime (WebSocket + STOMP)
+
+Admin đang mở bất kỳ trang quản trị nào sẽ thấy thẻ thông báo ở góc màn hình khi có đơn mới,
+đơn được xác nhận hoặc bị huỷ.
+
+- Endpoint: `/admin/ws` — nằm **trong** khu quản trị nên chain bảo mật của admin bảo vệ luôn;
+  đặt ở ngoài thì phải mở công khai và ai cũng nghe được thông tin đơn hàng của khách.
+- Kênh: `/topic/bookings`, broker trong bộ nhớ.
+- **Không dùng SockJS**: SockJS dự phòng bằng transport POST, sẽ vướng CSRF của chain quản trị.
+  WebSocket thuần chỉ cần một GET Upgrade.
+
+Sự kiện phát ở `BookingService`/`BookingAdminService` và chỉ được gửi đi **sau khi transaction
+commit** (`@TransactionalEventListener(AFTER_COMMIT)`) — nếu không, một lỗi làm rollback sẽ để lại
+thông báo về đơn không hề tồn tại.
+
 ## 2f. Job nền
 
 | Job | Nhịp | Việc |
