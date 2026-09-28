@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class AdminDashboardController {
@@ -28,6 +29,14 @@ public class AdminDashboardController {
         model.addAttribute("pageHeading", "Dashboard");
         model.addAttribute("stats", dashboardService.stats());
         return "admin/dashboard";
+    }
+
+    // Dữ liệu biểu đồ trả riêng dạng JSON thay vì nhúng vào HTML: tránh chuyện escape JSON trong
+    // thẻ <script> của Thymeleaf, và sau này đổi biểu đồ không phải đụng tới controller.
+    @GetMapping("/admin/reports/charts")
+    @ResponseBody
+    public DashboardCharts charts() {
+        return dashboardService.charts();
     }
 
     @GetMapping("/admin/reports/revenue/export")

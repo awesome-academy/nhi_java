@@ -774,3 +774,88 @@ a.stat-card:hover {
 .import-result .flash {
     display: inline-block;
 }
+
+/* ---------- Biểu đồ ----------
+   Bảng màu lấy từ bộ dataviz đã qua validator (lightness band, chroma, tương phản >= 3:1 trên
+   nền tương ứng). Khai bằng custom property để JS đọc lại, nhờ vậy màu chỉ tồn tại ở một chỗ. */
+
+:root {
+    --viz-series-1: #2a78d6;
+    --viz-surface: #ffffff;
+    --viz-text-primary: #0b0b0b;
+    --viz-text-secondary: #52514e;
+    --viz-grid: #e5e7eb;
+}
+
+/* Bước màu riêng cho nền tối — CỐ Ý không gắn vào @media (prefers-color-scheme: dark).
+   Khu quản trị hiện chỉ có giao diện sáng (thẻ .chart-card hardcode nền trắng), nên nếu đổi màu
+   theo thiết lập hệ điều hành thì máy nào đang để chế độ tối sẽ thấy biểu đồ màu tối nằm trên
+   thẻ trắng — lưới đậm cắt ngang qua cột. Đã thấy đúng hiện tượng này khi chụp màn hình kiểm tra.
+   Bộ giá trị dưới đây để sẵn cho lúc khu quản trị có chế độ tối thật, khi đó chỉ cần gắn
+   data-theme="dark" lên thẻ gốc là biểu đồ đi theo. */
+:root[data-theme="dark"] {
+    --viz-series-1: #3987e5;
+    --viz-surface: #1a1a19;
+    --viz-text-primary: #ffffff;
+    --viz-text-secondary: #c3c2b7;
+    --viz-grid: #383835;
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.chart-card {
+    background: #fff;
+    border: 1px solid var(--admin-border);
+    border-radius: 8px;
+    padding: 18px;
+    margin: 0;
+}
+
+.chart-card figcaption {
+    margin-bottom: 12px;
+}
+
+.chart-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.chart-note {
+    color: #9ca3af;
+    font-size: 12px;
+    margin: 2px 0 0;
+}
+
+/* Chiều cao cố định phải chừa chỗ cho dải nhãn trục, nếu không nhãn bị cắt mất. */
+.chart-box {
+    position: relative;
+    height: 260px;
+}
+
+.chart-empty {
+    color: #6b7280;
+    font-size: 14px;
+    text-align: center;
+    padding: 90px 0;
+    margin: 0;
+}
+
+.chart-table {
+    margin-top: 12px;
+}
+
+.chart-table summary {
+    color: var(--admin-accent);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.chart-table .data-table {
+    margin-top: 10px;
+}

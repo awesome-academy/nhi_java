@@ -134,7 +134,19 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
-## 2e. Nhập tour từ Excel
+## 2e. Biểu đồ dashboard
+
+Hai biểu đồ (Chart.js): doanh thu 6 tháng gần nhất, và 5 tour doanh thu cao nhất tháng này.
+Dữ liệu lấy từ `GET /admin/reports/charts`.
+
+Mỗi biểu đồ chỉ có **một** chuỗi số liệu nên dùng **một màu** — tô mỗi cột một màu khi chúng cùng
+ý nghĩa là gán màu theo thứ hạng chứ không theo dữ liệu. Màu khai trong `admin.css` dưới dạng
+custom property (`--viz-*`) để JS đọc lại, nhờ vậy bảng màu chỉ tồn tại ở một chỗ.
+
+Mỗi biểu đồ kèm một bảng số liệu (`Xem dạng bảng`): biểu đồ không được là cách duy nhất đọc được
+con số.
+
+## 2e2. Nhập tour từ Excel
 
 `/admin/tours/import` — có nút tải **file mẫu** sinh từ chính lớp `TourImportRow`, nên cột trong
 file mẫu không bao giờ lệch với cột bộ nhập mong đợi.

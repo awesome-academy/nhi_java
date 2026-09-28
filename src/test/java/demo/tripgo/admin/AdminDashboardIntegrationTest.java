@@ -34,6 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -123,6 +125,54 @@ class AdminDashboardIntegrationTest {
 
         assertThat(statsFrom(mvc.perform(get("/admin"))).revenueThisMonth())
             .isEqualByComparingTo("5000000");
+    }
+
+    // ---- Biểu đồ ----
+
+    // Trục thời gian luôn đủ 6 mốc, kể cả tháng không có đơn nào: bỏ cột đi sẽ làm trục nói dối.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void chartsAlwaysReturnSixMonthsEvenWhenEmpty() throws Exception {
+        mvc.perform(get("/admin/reports/charts"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.revenueByMonth.length()").value(6))
+            .andExpect(jsonPath("$.revenueByMonth[5].revenue").value(0))
+            .andExpect(jsonPath("$.topTours").isEmpty());
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void chartsReportThisMonthRevenueIgnoringCancelled() throws Exception {
+        saveBooking(BookingStatus.CONFIRMED, "2000000");
+        saveBooking(BookingStatus.PENDING, "3000000");
+        saveBooking(BookingStatus.CANCELLED, "9000000");
+
+        String thisMonth = "%02d/%d".formatted(
+            java.time.LocalDate.now().getMonthValue(), java.time.LocalDate.now().getYear());
+
+        mvc.perform(get("/admin/reports/charts"))
+            .andExpect(jsonPath("$.revenueByMonth[5].label").value(thisMonth))
+            .andExpect(jsonPath("$.revenueByMonth[5].revenue").value(5000000))
+            .andExpect(jsonPath("$.revenueByMonth[5].bookingCount").value(2))
+            .andExpect(jsonPath("$.topTours.length()").value(1))
+            .andExpect(jsonPath("$.topTours[0].revenue").value(5000000));
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void normalUserCannotReadCharts() throws Exception {
+        mvc.perform(get("/admin/reports/charts"))
+            .andExpect(redirectedUrl("/admin/login?denied"));
+    }
+
+    // Biểu đồ không được là cách duy nhất đọc số liệu: trang phải có sẵn bảng kèm theo.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void dashboardShipsTableViewAlongsideCharts() throws Exception {
+        mvc.perform(get("/admin"))
+            .andExpect(content().string(containsString("Xem dạng bảng")))
+            .andExpect(content().string(containsString("revenueTrendTable")))
+            .andExpect(content().string(containsString("topToursTable")));
     }
 
     @Test

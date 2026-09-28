@@ -48,6 +48,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         """)
     java.math.BigDecimal sumRevenueSince(@Param("from") java.time.LocalDateTime from);
 
+    // Doanh thu theo từng tháng. Dùng extract() của HQL thay vì date_trunc của Postgres để truy
+    // vấn chạy được trên cả H2 lẫn Postgres. Alias yr/mth vì "year"/"month" là từ khoá.
+    @Query("""
+        select extract(year from b.createdAt) as yr,
+               extract(month from b.createdAt) as mth,
+               count(b.id) as bookingCount,
+               sum(b.totalPrice) as revenue
+        from Booking b
+        where b.status <> demo.tripgo.entity.BookingStatus.CANCELLED
+          and b.createdAt >= :from
+        group by extract(year from b.createdAt), extract(month from b.createdAt)
+        order by extract(year from b.createdAt), extract(month from b.createdAt)
+        """)
+    java.util.List<MonthlyRevenueView> revenueByMonthSince(@Param("from") java.time.LocalDateTime from);
+
     // Doanh thu tháng gộp theo tour, dùng cho file báo cáo. Gộp ở DB thay vì tải hết đơn về rồi
     // cộng trong bộ nhớ.
     @Query("""

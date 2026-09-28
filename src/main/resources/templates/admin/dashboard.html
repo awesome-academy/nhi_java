@@ -33,6 +33,44 @@
             <span class="stat-note">Không tính đơn đã huỷ</span>
         </div>
     </div>
+
+    <section class="chart-grid">
+        <figure class="chart-card">
+            <figcaption>
+                <h2 class="chart-title">Doanh thu 6 tháng gần nhất</h2>
+                <p class="chart-note">Không tính đơn đã huỷ</p>
+            </figcaption>
+            <div class="chart-box"><canvas id="revenueTrend"></canvas></div>
+            <!--/* Bảng số liệu kèm theo: biểu đồ không được là cách DUY NHẤT đọc được con số
+                   (người dùng trình đọc màn hình, và cả lúc in ra giấy). */-->
+            <details class="chart-table">
+                <summary>Xem dạng bảng</summary>
+                <table class="data-table" id="revenueTrendTable">
+                    <thead><tr><th>Tháng</th><th class="num">Số đơn</th><th class="num">Doanh thu</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </details>
+        </figure>
+
+        <figure class="chart-card">
+            <figcaption>
+                <h2 class="chart-title">Tour doanh thu cao nhất tháng này</h2>
+                <p class="chart-note">Tối đa 5 tour</p>
+            </figcaption>
+            <div class="chart-box"><canvas id="topTours"></canvas></div>
+            <p class="chart-empty" id="topToursEmpty" hidden>Tháng này chưa có đơn nào</p>
+            <details class="chart-table">
+                <summary>Xem dạng bảng</summary>
+                <table class="data-table" id="topToursTable">
+                    <thead><tr><th>Tour</th><th class="num">Doanh thu</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </details>
+        </figure>
+    </section>
+
 </main>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script th:src="@{/js/admin-charts.js}"></script>
 </body>
 </html>
