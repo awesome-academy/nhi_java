@@ -31,14 +31,14 @@ class TourControllerIntegrationTest {
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Destination daNang;
     private Destination haNoi;
 
     @BeforeEach
     void setUp() {
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
         daNang = saveDestination("Da Nang", "da-nang");
         haNoi = saveDestination("Ha Noi", "ha-noi");
     }

@@ -46,6 +46,17 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
     // Dữ liệu có từ trước khi thêm cột tìm kiếm; SearchTextBackfill điền nốt lúc khởi động.
     java.util.List<Tour> findBySearchTextIsNull();
 
+    // Tour có rating_avg / review_count lệch so với bảng reviews. Hai cột này được denormalize để
+    // lọc và sắp xếp chạy thẳng ở DB, nên chúng có thể trôi nếu một lần cập nhật nào đó thất bại.
+    @Query("""
+        select t from Tour t
+        where t.deletedAt is null
+          and (t.reviewCount <> (select count(r.id) from Review r where r.tour = t)
+               or abs(t.ratingAvg - coalesce(
+                   (select avg(r.rating) from Review r where r.tour = t), 0)) > 0.001)
+        """)
+    java.util.List<Tour> findWithStaleRating();
+
     // Đếm tour đang trỏ tới một file ảnh (kể cả tour trong thùng rác: khôi phục xong vẫn cần ảnh).
     long countByThumbnailUrl(String thumbnailUrl);
 

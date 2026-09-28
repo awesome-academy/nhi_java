@@ -36,17 +36,14 @@ class PostgresQueryDialectTest extends PostgresTestBase {
     @Autowired CategoryRepository categories;
     @Autowired UserRepository users;
     @Autowired DestinationAdminService destinationAdminService;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Destination destination;
     private Tour tour;
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         destination = new Destination();
         destination.setName("Đà Nẵng");

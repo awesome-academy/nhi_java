@@ -28,11 +28,11 @@ class DestinationControllerIntegrationTest {
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     @BeforeEach
     void setUp() {
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
     }
 
     private Destination saveDestination(String name, String slug) {

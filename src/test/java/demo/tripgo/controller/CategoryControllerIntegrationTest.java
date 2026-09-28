@@ -24,6 +24,7 @@ class CategoryControllerIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired CategoryRepository categories;
     @Autowired TourRepository tours;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private static final List<String[]> SEED = List.of(
         new String[]{"beach", "Biển đảo"},
@@ -36,9 +37,7 @@ class CategoryControllerIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // Xoá tour trước vì tours.category_id là khoá ngoại trỏ sang categories.
-        tours.deleteAll();
-        categories.deleteAll();
+        cleaner.clean();
         SEED.forEach(row -> {
             Category c = new Category();
             c.setSlug(row[0]);

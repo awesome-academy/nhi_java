@@ -48,6 +48,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         """)
     java.math.BigDecimal sumRevenueSince(@Param("from") java.time.LocalDateTime from);
 
+    // Đơn chờ xác nhận quá lâu: job tự huỷ để trả chỗ lại cho khách khác.
+    java.util.List<Booking> findByStatusAndCreatedAtBefore(
+        BookingStatus status, java.time.LocalDateTime before);
+
     // Doanh thu theo từng tháng. Dùng extract() của HQL thay vì date_trunc của Postgres để truy
     // vấn chạy được trên cả H2 lẫn Postgres. Alias yr/mth vì "year"/"month" là từ khoá.
     @Query("""

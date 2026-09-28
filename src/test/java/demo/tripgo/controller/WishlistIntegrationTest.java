@@ -40,15 +40,14 @@ class WishlistIntegrationTest {
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Tour tourA;
     private Tour tourB;
 
     @BeforeEach
     void setUp() {
-        users.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
 
         Destination d = new Destination();
         d.setName("Da Nang");

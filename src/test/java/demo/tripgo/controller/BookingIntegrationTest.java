@@ -47,17 +47,14 @@ class BookingIntegrationTest {
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
     @Autowired JwtService jwt;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private Tour tour;
     private LocalDate date;
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         Destination d = new Destination();
         d.setName("Da Nang");

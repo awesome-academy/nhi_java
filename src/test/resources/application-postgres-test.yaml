@@ -15,3 +15,7 @@ ratelimit:
   auth:
     max-requests: 100000
     window-seconds: 60
+
+tasks:
+  maintenance:
+    enabled: false

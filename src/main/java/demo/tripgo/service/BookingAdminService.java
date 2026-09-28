@@ -60,7 +60,7 @@ public class BookingAdminService {
         Booking booking = bookingRepository.findWithDetailsById(id)
             .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
         requirePending(booking);
-        return bookingService.cancelByAdmin(id);
+        return bookingService.cancelById(id);
     }
 
     // Chặn ở tầng service chứ không chỉ ẩn nút trên giao diện: nút ẩn không ngăn được request

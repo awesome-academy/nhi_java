@@ -112,11 +112,11 @@ public class BookingService {
         return bookingMapper.toResponse(booking);
     }
 
-    // Admin huỷ đơn của bất kỳ khách nào, nên tìm theo id chứ không ràng buộc user.
+    // Huỷ đơn không ràng buộc user: dùng cho admin bấm huỷ và cho job tự huỷ đơn quá hạn.
     // Vẫn đi qua cùng một hàm huỷ để phần hoàn chỗ (có khoá) chỉ tồn tại ở MỘT nơi —
     // chép logic này sang service khác là mời gọi bug bán vượt số chỗ.
     @Transactional
-    public Booking cancelByAdmin(Long id) {
+    public Booking cancelById(Long id) {
         Booking booking = bookingRepository.findWithDetailsById(id)
             .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
         cancelAndReleaseSeats(booking);

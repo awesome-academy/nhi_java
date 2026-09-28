@@ -51,6 +51,7 @@ class TourReviewAvailabilityIntegrationTest {
     @Autowired CategoryRepository categories;
     @Autowired DepartureRepository departures;
     @Autowired BookingRepository bookings;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
     @MockitoSpyBean ReviewRepository reviews;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
@@ -60,12 +61,7 @@ class TourReviewAvailabilityIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        reviews.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         Destination d = new Destination();
         d.setName("Da Nang");

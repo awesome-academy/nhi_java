@@ -37,6 +37,21 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
+# Job dọn dẹp định kỳ và pool luồng chạy nền (xem MaintenanceScheduler, AsyncConfig).
+tasks:
+  maintenance:
+    enabled: ${TASKS_ENABLED:true}
+    # Đơn chờ xác nhận quá số giờ này sẽ bị tự huỷ và hoàn chỗ.
+    expire-after-hours: ${BOOKING_EXPIRE_HOURS:72}
+    cancel-expired-delay: PT1H
+    refresh-rating-delay: PT6H
+    # Hoãn lần chạy đầu để không tranh tài nguyên với lúc ứng dụng vừa khởi động.
+    initial-delay: PT2M
+  executor:
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 50
+
 # Đăng nhập Facebook. Bỏ trống client-id -> tính năng không bật, app vẫn chạy bình thường.
 # Lấy giá trị ở https://developers.facebook.com/apps -> App settings -> Basic.
 social:

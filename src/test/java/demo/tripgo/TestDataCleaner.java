@@ -1,6 +1,7 @@
 package demo.tripgo;
 
 import demo.tripgo.repository.BookingRepository;
+import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DepartureRepository;
 import demo.tripgo.repository.DestinationRepository;
 import demo.tripgo.repository.ReviewRepository;
@@ -18,8 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 // Là @Component trong source test: @SpringBootTest quét từ package demo.tripgo nên bean này được
 // nạp cho mọi context test, còn khi chạy ứng dụng thật thì source test không nằm trên classpath.
 //
-// Cố ý KHÔNG xoá categories: nhiều test dùng lại loại hình theo slug và tự tạo nếu chưa có, xoá
-// đi chỉ làm chậm thêm.
+// Xoá luôn cả categories. Ban đầu mình để lại vì nhiều test dùng find-or-create theo slug, nhưng
+// test nào tự seed danh mục lại đụng lỗi trùng slug — một quy tắc "xoá sạch" dễ đoán hơn là một
+// quy tắc có ngoại lệ mà mỗi người phải nhớ.
 @Component
 public class TestDataCleaner {
 
@@ -29,6 +31,7 @@ public class TestDataCleaner {
     private final TourRepository tours;
     private final DestinationRepository destinations;
     private final UserRepository users;
+    private final CategoryRepository categories;
 
     public TestDataCleaner(
         BookingRepository bookings,
@@ -36,7 +39,8 @@ public class TestDataCleaner {
         DepartureRepository departures,
         TourRepository tours,
         DestinationRepository destinations,
-        UserRepository users
+        UserRepository users,
+        CategoryRepository categories
     ) {
         this.bookings = bookings;
         this.reviews = reviews;
@@ -44,6 +48,7 @@ public class TestDataCleaner {
         this.tours = tours;
         this.destinations = destinations;
         this.users = users;
+        this.categories = categories;
     }
 
     // Con trỏ tới cha: booking/review/departure -> tour -> destination. User đứng cuối vì
@@ -55,6 +60,7 @@ public class TestDataCleaner {
         departures.deleteAll();
         tours.deleteAll();
         destinations.deleteAll();
+        categories.deleteAll();
         users.deleteAll();
     }
 }

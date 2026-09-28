@@ -134,6 +134,19 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
+## 2f. Job nền
+
+| Job | Nhịp | Việc |
+|---|---|---|
+| Tự huỷ đơn quá hạn | mỗi giờ | Đơn `PENDING` quá `BOOKING_EXPIRE_HOURS` (mặc định 72h) → huỷ và **hoàn chỗ** |
+| Tính lại đánh giá | mỗi 6 giờ | So `rating_avg`/`review_count` với bảng `reviews`, sửa tour bị lệch |
+
+Tắt bằng `TASKS_ENABLED=false`. Job chạy trên `ThreadPoolTaskExecutor` riêng (`AsyncConfig`) chứ
+không dùng executor mặc định — executor mặc định tạo một luồng mới cho mỗi lần gọi, không giới hạn.
+
+Việc huỷ đơn đi qua đúng `BookingService.cancelById` mà admin dùng, nên phần hoàn chỗ (có khoá
+bi quan) chỉ tồn tại ở một nơi.
+
 ## 2e. Biểu đồ dashboard
 
 Hai biểu đồ (Chart.js): doanh thu 6 tháng gần nhất, và 5 tour doanh thu cao nhất tháng này.
