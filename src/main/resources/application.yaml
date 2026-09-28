@@ -1,4 +1,17 @@
 spring:
+  # Hàng đợi gửi mail (xem JmsConfig). Chỉ dùng khi tasks.jms.enabled=true.
+  activemq:
+    broker-url: ${MQ_URL:tcp://localhost:61616}
+    user: ${MQ_USER:admin}
+    password: ${MQ_PASSWORD:admin}
+  jms:
+    # Hàng đợi point-to-point: mỗi message chỉ một người tiêu thụ xử lý.
+    pub-sub-domain: false
+    listener:
+      session:
+        # Listener ném lỗi thì message quay lại hàng đợi để thử lại.
+        transacted: true
+
   application:
     name: tripgo
 
@@ -39,6 +52,10 @@ cors:
 
 # Job dọn dẹp định kỳ và pool luồng chạy nền (xem MaintenanceScheduler, AsyncConfig).
 tasks:
+  # MẶC ĐỊNH TẮT: có ActiveMQ trên classpath mà không có broker thì listener thử kết nối lại liên
+  # tục và làm log đầy lỗi. Tắt thì DirectBookingMailDispatcher làm thay, việc gửi mail không mất.
+  jms:
+    enabled: ${JMS_ENABLED:false}
   maintenance:
     enabled: ${TASKS_ENABLED:true}
     # Đơn chờ xác nhận quá số giờ này sẽ bị tự huỷ và hoàn chỗ.

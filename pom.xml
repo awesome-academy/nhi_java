@@ -44,6 +44,19 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<!-- Hàng đợi cho việc gửi mail xác nhận đặt tour. Tắt được bằng cấu hình, app vẫn chạy
+		     bình thường khi không có broker. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-activemq</artifactId>
+		</dependency>
+		<!-- Broker nhúng (vm://) để test luồng JMS thật mà không cần dựng ActiveMQ bên ngoài. -->
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-broker</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Báo realtime cho khu quản trị khi có đơn mới hoặc đơn đổi trạng thái. -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

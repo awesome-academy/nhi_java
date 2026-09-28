@@ -134,6 +134,21 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
+## 2h. Hàng đợi gửi mail (JMS)
+
+Mail xác nhận đặt tour đi qua hàng đợi `tripgo.booking.mail` thay vì gửi ngay trong request.
+
+| `JMS_ENABLED` | Cách gửi |
+|---|---|
+| `false` (mặc định) | `DirectBookingMailDispatcher` — gửi thẳng trên pool nền, **không cần broker** |
+| `true` | Qua ActiveMQ; listener ném lỗi thì message quay lại hàng đợi để thử lại |
+
+Mặc định tắt vì có ActiveMQ trên classpath mà không có broker thì listener thử kết nối lại liên
+tục và làm log đầy lỗi. Bật thì chạy kèm service `mq` trong `docker-compose.yml`.
+
+Hai bản cài cùng một interface nên phần còn lại của ứng dụng không cần biết có broker hay không —
+và việc gửi mail không lặng lẽ biến mất khi ai đó quên bật JMS.
+
 ## 2g. Thông báo realtime (WebSocket + STOMP)
 
 Admin đang mở bất kỳ trang quản trị nào sẽ thấy thẻ thông báo ở góc màn hình khi có đơn mới,
