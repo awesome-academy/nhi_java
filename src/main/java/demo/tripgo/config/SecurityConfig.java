@@ -124,6 +124,10 @@ public class SecurityConfig {
                 // Ảnh tour do admin tải lên: trang bán hàng công khai phải xem được.
                 .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
+                // SOAP cho hệ thống đối tác: client SOAP không có phiên đăng nhập để mang theo.
+                // Mở được vì endpoint chỉ đọc và chỉ trả số liệu chỗ trống, không có dữ liệu khách.
+                .requestMatchers(WebServiceConfig.PATH + "/**").permitAll()
+
                 // Cho phép người chưa đăng nhập gọi API đăng ký và đăng nhập.
                 // Matcher phải gồm cả tiền tố /api/v1: không còn context-path nên servlet
                 // container không tách phần này ra nữa (xem ApiPathConfig).

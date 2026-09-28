@@ -44,6 +44,22 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<!-- SOAP: endpoint cho hệ thống đối tác tra cứu chỗ trống. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web-services</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>wsdl4j</groupId>
+			<artifactId>wsdl4j</artifactId>
+		</dependency>
+		<!-- Gửi SOAP request thật vào endpoint trong test, đi qua đúng lớp marshal/unmarshal. -->
+		<dependency>
+			<groupId>org.springframework.ws</groupId>
+			<artifactId>spring-ws-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- Hàng đợi cho việc gửi mail xác nhận đặt tour. Tắt được bằng cấu hình, app vẫn chạy
 		     bình thường khi không có broker. -->
 		<dependency>
@@ -186,6 +202,29 @@
 
 	<build>
 		<plugins>
+			<!-- Contract-first: lớp payload được SINH RA từ tripgo.xsd, không viết tay.
+			     Nhờ vậy XSD là nguồn sự thật duy nhất — WSDL công bố cho đối tác và lớp Java xử lý
+			     request không thể lệch nhau. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>jaxb2-maven-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>xjc</id>
+						<goals>
+							<goal>xjc</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<sources>
+						<source>src/main/resources/soap/tripgo.xsd</source>
+					</sources>
+					<outputDirectory>${project.build.directory}/generated-sources/jaxb</outputDirectory>
+					<clearOutputDir>false</clearOutputDir>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

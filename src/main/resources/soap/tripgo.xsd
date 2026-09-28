@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Hợp đồng SOAP cho hệ thống đối tác tra cứu chỗ trống.
+
+  Contract-first: file này là nguồn sự thật duy nhất. Spring-WS sinh WSDL từ đây, còn
+  jaxb2-maven-plugin sinh lớp Java từ đây, nên hai bên không thể lệch nhau.
+
+  Chỉ đọc, chỉ lộ số liệu chỗ trống — không có thông tin khách hàng.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://tripgo.demo/soap"
+           targetNamespace="http://tripgo.demo/soap"
+           elementFormDefault="qualified">
+
+    <xs:element name="getTourAvailabilityRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <!-- Slug của tour, ví dụ "da-nang-3n2d". Dùng slug thay vì id vì đó cũng là thứ
+                     API công khai dùng, đối tác không phải biết id nội bộ. -->
+                <xs:element name="tourSlug" type="xs:string"/>
+                <!-- Bỏ trống thì lấy mọi ngày khởi hành sắp tới. -->
+                <xs:element name="fromDate" type="xs:date" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getTourAvailabilityResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="tourSlug" type="xs:string"/>
+                <xs:element name="tourTitle" type="xs:string"/>
+                <xs:element name="departure" type="tns:departure" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="departure">
+        <xs:sequence>
+            <xs:element name="date" type="xs:date"/>
+            <xs:element name="totalSeats" type="xs:int"/>
+            <xs:element name="remainingSeats" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

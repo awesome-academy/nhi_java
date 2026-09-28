@@ -134,6 +134,21 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
 
+## 2i. SOAP cho hệ thống đối tác
+
+| | |
+|---|---|
+| WSDL | `GET /ws/tourAvailability.wsdl` |
+| Endpoint | `POST /ws` |
+| Thao tác | `getTourAvailability(tourSlug, fromDate?)` → danh sách ngày khởi hành + chỗ trống |
+
+**Contract-first**: `src/main/resources/soap/tripgo.xsd` là nguồn sự thật duy nhất — Spring-WS sinh
+WSDL từ đó, `jaxb2-maven-plugin` sinh lớp Java từ đó, nên hai bên không lệch nhau được.
+
+Endpoint mở công khai vì client SOAP không có phiên đăng nhập để mang theo, và nó chỉ đọc + chỉ
+trả số liệu chỗ trống, không có dữ liệu khách hàng. Tour đã xoá mềm không lộ ra.
+Slug sai trả **SOAP Fault dạng CLIENT** để đối tác biết là phải sửa request chứ không phải thử lại.
+
 ## 2h. Hàng đợi gửi mail (JMS)
 
 Mail xác nhận đặt tour đi qua hàng đợi `tripgo.booking.mail` thay vì gửi ngay trong request.
