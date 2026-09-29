@@ -107,9 +107,14 @@ jobs:
             mutation($p:ID!,$i:ID!,$f:ID!,$o:String!){ updateProjectV2ItemFieldValue(input:{projectId:$p, itemId:$i, fieldId:$f, value:{singleSelectOptionId:$o}}){ projectV2Item { id } } }' >/dev/null
           echo "Channel = $SLACK_CHANNEL"
 
-      # Có người nhận review (assign / request review) -> chuyển sang cột "Đang review"
+      # Có người nhận review (assign / request review), hoặc reviewer (không phải tác giả) submit review dạng Comment
+      # -> chuyển sang cột "Đang review" (chỉ khi PR đang ở "Chờ review"; không ghi đè Cần sửa / Sẵn sàng merge)
       - name: Move PR to "Đang review"
-        if: github.event_name == 'pull_request_target' && (github.event.action == 'assigned' || github.event.action == 'review_requested') && env.GH_PAT != ''
+        if: >-
+          env.GH_PAT != '' && (
+            (github.event_name == 'pull_request_target' && (github.event.action == 'assigned' || github.event.action == 'review_requested')) ||
+            (github.event_name == 'pull_request_review' && github.event.review.state == 'commented' && github.event.review.user.login != github.event.pull_request.user.login)
+          )
         continue-on-error: true
         env:
           GH_TOKEN: ${{ env.GH_PAT }}
@@ -122,9 +127,15 @@ jobs:
           OID=$(jq -r --arg s "$REVIEWING_STATUS" '.data.organization.projectV2.field.options[] | select(.name==$s) | .id' <<< "$PROJECT")
           [ -n "$OID" ] || { echo "Status option '$REVIEWING_STATUS' not found on board"; exit 0; }
 
-          ITEM=$(gh api graphql -F id="$PR_NODE_ID" -f query='
-            query($id:ID!){ node(id:$id){ ... on PullRequest { projectItems(first:20){ nodes { id project { id } } } } } }' \
-            | jq -r --arg p "$PID" '.data.node.projectItems.nodes[] | select(.project.id==$p) | .id')
+          ITEMJSON=$(gh api graphql -F id="$PR_NODE_ID" -f query='
+            query($id:ID!){ node(id:$id){ ... on PullRequest { projectItems(first:20){ nodes { id project { id }
+              status: fieldValueByName(name:"Status"){ ... on ProjectV2ItemFieldSingleSelectValue { name } } } } } } }' \
+            | jq -c --arg p "$PID" '.data.node.projectItems.nodes[] | select(.project.id==$p)')
+          ITEM=$(jq -r '.id // empty' <<< "$ITEMJSON"); CUR=$(jq -r '.status.name // ""' <<< "$ITEMJSON")
+          echo "Current status: '$CUR'"
+          if [ -n "$CUR" ] && [ "$CUR" != "$WAITING_STATUS" ] && [ "$CUR" != "$REVIEWING_STATUS" ]; then
+            echo "PR đang ở '$CUR', không chuyển về '$REVIEWING_STATUS'"; exit 0
+          fi
           if [ -z "$ITEM" ]; then
             echo "PR chưa có trên board, thêm vào trước"
             ITEM=$(gh api graphql -F p="$PID" -F c="$PR_NODE_ID" -f query='
