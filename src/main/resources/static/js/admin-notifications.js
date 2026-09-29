@@ -35,7 +35,8 @@
 
     function show(event) {
         const card = document.createElement('div');
-        card.className = 'toast toast-' + (event.kind || '').toLowerCase();
+        // Tiền tố tg- để không đụng component .toast của Bootstrap (xem ghi chú trong admin.css).
+        card.className = 'tg-notice toast-' + (event.kind || '').toLowerCase();
         // textContent chứ không innerHTML: nội dung có tên khách và tên tour do người dùng nhập.
         card.textContent = event.message || 'Có cập nhật đơn đặt';
 

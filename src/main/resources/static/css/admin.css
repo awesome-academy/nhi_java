@@ -860,9 +860,12 @@ a.stat-card:hover {
     margin-top: 10px;
 }
 
-/* ---------- Thông báo realtime ---------- */
+/* ---------- Thông báo realtime ----------
+   Tên class cố ý KHÔNG dùng "toast": Bootstrap có sẵn component cùng tên với quy tắc
+   `.toast:not(.show){display:none}`, nên thông báo của mình sẽ bị ẩn sạch mà không báo lỗi gì.
+   Đã dính đúng lỗi này một lần — chỉ phát hiện ra khi chụp màn hình trang thật. */
 
-.toast-host {
+.tg-notice-host {
     position: fixed;
     right: 20px;
     bottom: 20px;
@@ -874,7 +877,7 @@ a.stat-card:hover {
     pointer-events: none;
 }
 
-.toast {
+.tg-notice {
     pointer-events: auto;
     background: #1f2937;
     color: #fff;
@@ -888,26 +891,26 @@ a.stat-card:hover {
     gap: 12px;
 }
 
-.toast a {
+.tg-notice a {
     color: #93c5fd;
     text-decoration: none;
     white-space: nowrap;
     font-weight: 500;
 }
 
-.toast a:hover {
+.tg-notice a:hover {
     text-decoration: underline;
 }
 
 /* Dải màu trái phân biệt loại sự kiện, kèm chữ chứ không chỉ dựa vào màu. */
-.toast-created {
+.tg-notice-created {
     border-left: 4px solid #eda100;
 }
 
-.toast-confirmed {
+.tg-notice-confirmed {
     border-left: 4px solid #1baf7a;
 }
 
-.toast-cancelled {
+.tg-notice-cancelled {
     border-left: 4px solid #9ca3af;
 }
