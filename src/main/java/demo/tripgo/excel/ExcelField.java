@@ -3,7 +3,8 @@ package demo.tripgo.excel;
 import java.lang.reflect.Field;
 
 // Một field đã gắn @ExcelColumn, kèm sẵn metadata để khỏi đọc annotation lại mỗi lần dùng.
-public record ExcelField(Field field, String header, int order, boolean required) {
+// format rỗng = không có định dạng riêng.
+public record ExcelField(Field field, String header, int order, boolean required, String format) {
 
     public Object read(Object target) {
         try {

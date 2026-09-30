@@ -58,9 +58,10 @@ public class MaintenanceService {
                     booking.getCode(), exception.getMessage());
             }
         }
-        if (cancelled > 0) {
-            log.info("Đã tự huỷ {} đơn chờ xác nhận quá {} giờ", cancelled, expireAfterHours);
-        }
+        // Ghi log MỌI lần chạy, kể cả khi không có gì để huỷ: nhìn log là biết job còn chạy đều,
+        // thay vì im lặng không phân biệt được "không có đơn quá hạn" với "job đã chết".
+        log.info("Kiểm tra đơn chờ xác nhận quá {} giờ: tìm thấy {}, đã huỷ {}",
+            expireAfterHours, expired.size(), cancelled);
         return cancelled;
     }
 
@@ -77,8 +78,8 @@ public class MaintenanceService {
         }
         if (!stale.isEmpty()) {
             tourRepository.saveAll(stale);
-            log.info("Đã tính lại đánh giá cho {} tour bị lệch số liệu", stale.size());
         }
+        log.info("Kiểm tra điểm đánh giá: {} tour bị lệch số liệu, đã tính lại", stale.size());
         return stale.size();
     }
 }

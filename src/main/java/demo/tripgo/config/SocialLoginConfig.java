@@ -1,5 +1,7 @@
 package demo.tripgo.config;
 
+import demo.tripgo.security.AdminOAuth2LoginFailureHandler;
+import demo.tripgo.security.AdminSocialLoginUserService;
 import demo.tripgo.security.OAuth2LoginFailureHandler;
 import demo.tripgo.security.OAuth2LoginSuccessHandler;
 import demo.tripgo.security.SocialLoginUserService;
@@ -20,6 +22,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
@@ -39,6 +42,12 @@ public class SocialLoginConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SocialLoginConfig.class);
 
+    private static final String CUSTOMER_AUTHORIZATION_BASE = "/oauth2/authorization";
+    private static final String ADMIN_AUTHORIZATION_BASE = AdminSecurityConfig.ADMIN_BASE + "/oauth2/authorization";
+    // Facebook gọi về đây sau khi admin đồng ý. Phải nằm dưới /admin để chain quản trị (có
+    // session + CSRF) xử lý, chứ không rơi vào chain /login/oauth2/** vốn phát JWT cho khách.
+    private static final String ADMIN_CALLBACK_BASE = AdminSecurityConfig.ADMIN_BASE + "/login/oauth2/code";
+
     @Bean
     public ClientRegistrationRepository clientRegistrationRepository(SocialLoginProperties properties) {
         if (!properties.facebook().isConfigured()) {
@@ -46,7 +55,8 @@ public class SocialLoginConfig {
                 "Đăng nhập Facebook cần CẢ client-id và client-secret. Kiểm tra FACEBOOK_CLIENT_SECRET.");
         }
         log.info("Đã bật đăng nhập Facebook");
-        return new InMemoryClientRegistrationRepository(List.of(facebook(properties.facebook())));
+        return new InMemoryClientRegistrationRepository(List.of(
+            facebook(properties.facebook(), "{baseUrl}/login/oauth2/code/{registrationId}")));
     }
 
     // Chain riêng cho lúc bắt tay với Facebook. Tách khỏi chain API vì OAuth2 buộc phải giữ
@@ -72,7 +82,8 @@ public class SocialLoginConfig {
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(endpoint ->
-                    endpoint.authorizationRequestResolver(pkceResolver(clientRegistrationRepository)))
+                    endpoint.authorizationRequestResolver(
+                        pkceResolver(clientRegistrationRepository, CUSTOMER_AUTHORIZATION_BASE)))
                 .userInfoEndpoint(userInfo -> userInfo.userService(socialLoginUserService))
                 .successHandler(successHandler)
                 .failureHandler(failureHandler));
@@ -80,12 +91,44 @@ public class SocialLoginConfig {
         return http.build();
     }
 
+    // Đăng nhập Facebook cho khu quản trị: gắn vào chính chain /admin/**, nên đăng nhập xong là
+    // có phiên như form login, không phát JWT.
+    //
+    // Cùng app Facebook nhưng callback khác (/admin/login/oauth2/code/facebook), nên cần một
+    // ClientRegistration riêng. Nó KHÔNG được khai là bean: thêm một ClientRegistrationRepository
+    // thứ hai thì mọi chỗ Spring tự inject repository sẽ không biết chọn cái nào.
+    @Bean
+    public AdminSocialLogin adminSocialLogin(
+        SocialLoginProperties properties,
+        AdminSocialLoginUserService adminSocialLoginUserService,
+        AdminOAuth2LoginFailureHandler failureHandler
+    ) {
+        ClientRegistrationRepository adminRegistrations = new InMemoryClientRegistrationRepository(
+            facebook(properties.facebook(), "{baseUrl}" + ADMIN_CALLBACK_BASE + "/{registrationId}"));
+
+        return http -> http.oauth2Login(oauth2 -> oauth2
+            .clientRegistrationRepository(adminRegistrations)
+            // Thiếu dòng này Spring sẽ tự sinh trang /login mặc định và đổi điểm vào khi chưa
+            // đăng nhập — khu quản trị phải luôn đưa về đúng /admin/login.
+            .loginPage(AdminSecurityConfig.LOGIN_PAGE)
+            // Access token Facebook để trong phiên, đăng xuất là mất theo; không lưu vào bộ nhớ
+            // dùng chung của cả ứng dụng.
+            .authorizedClientRepository(new HttpSessionOAuth2AuthorizedClientRepository())
+            .authorizationEndpoint(endpoint -> endpoint
+                .authorizationRequestResolver(pkceResolver(adminRegistrations, ADMIN_AUTHORIZATION_BASE)))
+            .redirectionEndpoint(endpoint -> endpoint.baseUri(ADMIN_CALLBACK_BASE + "/*"))
+            .userInfoEndpoint(userInfo -> userInfo.userService(adminSocialLoginUserService))
+            .defaultSuccessUrl(AdminSecurityConfig.ADMIN_BASE, true)
+            .failureHandler(failureHandler));
+    }
+
     // Endpoint không ghi phiên bản: Facebook tự định tuyến, không cũ đi theo thời gian.
-    private ClientRegistration facebook(SocialLoginProperties.Credentials credentials) {
+    private ClientRegistration facebook(SocialLoginProperties.Credentials credentials, String redirectUri) {
         return CommonOAuth2Provider.FACEBOOK.getBuilder("facebook")
             .clientId(credentials.clientId())
             .clientSecret(credentials.clientSecret())
             .clientName("Facebook")
+            .redirectUri(redirectUri)
             .scope(credentials.scopes().toArray(String[]::new))
             .authorizationUri("https://www.facebook.com/dialog/oauth")
             .tokenUri("https://graph.facebook.com/oauth/access_token")
@@ -100,9 +143,12 @@ public class SocialLoginConfig {
     // Bọc thêm một lớp nuốt IllegalArgumentException: gõ nhầm /oauth2/authorization/google (provider
     // chưa đăng ký) sẽ ném lỗi và thành trang 500. Trả null thì request đi tiếp và kết thúc bằng
     // 404 — đúng nghĩa "không có đường dẫn này" và không làm log đầy stack trace vô ích.
-    private OAuth2AuthorizationRequestResolver pkceResolver(ClientRegistrationRepository repository) {
+    private OAuth2AuthorizationRequestResolver pkceResolver(
+        ClientRegistrationRepository repository,
+        String authorizationBaseUri
+    ) {
         DefaultOAuth2AuthorizationRequestResolver delegate =
-            new DefaultOAuth2AuthorizationRequestResolver(repository, "/oauth2/authorization");
+            new DefaultOAuth2AuthorizationRequestResolver(repository, authorizationBaseUri);
         delegate.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
 
         return new OAuth2AuthorizationRequestResolver() {

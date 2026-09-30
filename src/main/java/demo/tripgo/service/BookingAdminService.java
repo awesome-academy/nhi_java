@@ -1,12 +1,25 @@
 package demo.tripgo.service;
 
+import demo.tripgo.admin.AdminBookingForm;
 import demo.tripgo.admin.AdminBookingRow;
+import demo.tripgo.admin.CustomerOption;
+import demo.tripgo.admin.DepartureOption;
+import demo.tripgo.dto.request.ContactRequest;
+import demo.tripgo.dto.request.CreateBookingRequest;
+import demo.tripgo.dto.response.BookingResponse;
+import demo.tripgo.entity.Role;
+import demo.tripgo.entity.Tour;
+import demo.tripgo.entity.User;
+import demo.tripgo.entity.UserStatus;
 import demo.tripgo.entity.Booking;
 import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.exception.InvalidBookingRequestException;
 import demo.tripgo.event.BookingEvent;
 import demo.tripgo.exception.ResourceNotFoundException;
 import demo.tripgo.repository.BookingRepository;
+import demo.tripgo.repository.DepartureRepository;
+import demo.tripgo.repository.TourRepository;
+import demo.tripgo.repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +27,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
 
 // Xem và đổi trạng thái đơn ở khu quản trị. Việc huỷ đơn (có hoàn chỗ, có khoá) uỷ lại cho
 // BookingService thay vì chép sang đây.
@@ -23,15 +40,85 @@ public class BookingAdminService {
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
     private final ApplicationEventPublisher events;
+    private final UserRepository userRepository;
+    private final TourRepository tourRepository;
+    private final DepartureRepository departureRepository;
 
     public BookingAdminService(
         BookingRepository bookingRepository,
         BookingService bookingService,
-        ApplicationEventPublisher events
+        ApplicationEventPublisher events,
+        UserRepository userRepository,
+        TourRepository tourRepository,
+        DepartureRepository departureRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.bookingService = bookingService;
         this.events = events;
+        this.userRepository = userRepository;
+        this.tourRepository = tourRepository;
+        this.departureRepository = departureRepository;
+    }
+
+    // ---- Admin tạo đơn hộ khách ----
+
+    @Transactional(readOnly = true)
+    public List<Tour> bookableTours() {
+        return tourRepository.findByDeletedAtIsNullOrderByTitleAsc();
+    }
+
+    // Chỉ khách (role USER) đang hoạt động: tài khoản bị khoá không đặt được đơn, admin không
+    // phải khách. createForCustomer kiểm lại đúng hai điều này vì giá trị <select> sửa tay được.
+    @Transactional(readOnly = true)
+    public List<CustomerOption> bookableCustomers() {
+        return userRepository.findByRoleAndStatusOrderByEmailAsc(Role.USER, UserStatus.ACTIVE).stream()
+            .map(user -> new CustomerOption(user.getEmail(), user.getFullName()))
+            .toList();
+    }
+
+    // Chỉ ngày từ hôm nay trở đi và còn chỗ: chọn ngày đã hết chỗ chỉ để nhận lỗi thì vô ích.
+    @Transactional(readOnly = true)
+    public List<DepartureOption> upcomingDepartures(Long tourId) {
+        if (tourId == null) {
+            return List.of();
+        }
+        return departureRepository
+            .findByTourIdAndDepartureDateGreaterThanEqualOrderByDepartureDateAsc(tourId, LocalDate.now())
+            .stream()
+            .filter(departure -> departure.getRemainingSeats() > 0)
+            .map(departure -> new DepartureOption(departure.getDepartureDate(), departure.getRemainingSeats()))
+            .toList();
+    }
+
+    // Đơn gắn vào tài khoản khách CÓ SẴN (tìm theo email), trạng thái Chờ xác nhận như khách tự
+    // đặt — nên cũng qua bước xác nhận và bị job tự huỷ nếu để quá hạn.
+    //
+    // Việc thật (kiểm chỗ có khoá, trừ chỗ, tính tiền, sinh mã, phát sự kiện gửi mail + báo
+    // realtime) uỷ hết cho BookingService.createBooking: chép sang đây là có hai nơi trừ chỗ.
+    @Transactional
+    public BookingResponse createForCustomer(AdminBookingForm form) {
+        String email = form.getCustomerEmail().trim().toLowerCase(Locale.ROOT);
+        User customer = userRepository.findByEmail(email)
+            .orElseThrow(() -> new InvalidBookingRequestException(
+                "Không có tài khoản khách nào với email " + email));
+        if (customer.getStatus() != UserStatus.ACTIVE) {
+            throw new InvalidBookingRequestException("Tài khoản " + email + " đang không hoạt động");
+        }
+        if (customer.getRole() != Role.USER) {
+            throw new InvalidBookingRequestException("Tài khoản " + email + " không phải tài khoản khách");
+        }
+
+        CreateBookingRequest request = new CreateBookingRequest(
+            form.getTourId(),
+            form.getDepartureDate(),
+            form.getAdults(),
+            form.getChildren(),
+            new ContactRequest(
+                form.getContactName().trim(),
+                form.getContactEmail().trim(),
+                form.getContactPhone().trim(),
+                form.getNote() == null || form.getNote().isBlank() ? null : form.getNote().trim()));
+        return bookingService.createBooking(customer, request);
     }
 
     @Transactional(readOnly = true)

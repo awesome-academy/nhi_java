@@ -1,10 +1,10 @@
 package demo.tripgo.service;
 
-import demo.tripgo.admin.DashboardCharts;
+import demo.tripgo.admin.DailyRevenue;
 import demo.tripgo.admin.DashboardStats;
 import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.repository.BookingRepository;
-import demo.tripgo.repository.MonthlyRevenueView;
+import demo.tripgo.repository.DailyRevenueView;
 import demo.tripgo.repository.TourRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,43 +29,35 @@ public class DashboardService {
         this.bookingRepository = bookingRepository;
     }
 
-    // Số tour hiển thị trong biểu đồ "tour doanh thu cao nhất". Nhiều hơn thì nhãn tour chen nhau
-    // mà cũng không ai đọc tới.
-    private static final int TOP_TOURS = 5;
-    private static final int TREND_MONTHS = 6;
-
+    // requested null hoặc ở tương lai -> tháng hiện tại. Chặn cả ở đây chứ không chỉ ở ô chọn
+    // tháng trên giao diện: URL thì ai cũng sửa tay được.
     @Transactional(readOnly = true)
-    public DashboardCharts charts() {
-        LocalDate firstOfThisMonth = LocalDate.now().withDayOfMonth(1);
+    public DailyRevenue dailyRevenue(YearMonth requested) {
+        YearMonth current = YearMonth.now();
+        YearMonth month = requested == null || requested.isAfter(current) ? current : requested;
 
-        // Lấy từ đầu tháng thứ 6 tính ngược lại, để trục thời gian luôn đủ 6 mốc kể cả tháng rỗng.
-        LocalDateTime trendFrom = firstOfThisMonth.minusMonths(TREND_MONTHS - 1L).atStartOfDay();
-
-        Map<YearMonth, MonthlyRevenueView> byMonth = bookingRepository.revenueByMonthSince(trendFrom)
+        Map<Integer, DailyRevenueView> byDay = bookingRepository.revenueByDayBetween(
+                month.atDay(1).atStartOfDay(),
+                month.plusMonths(1).atDay(1).atStartOfDay())
             .stream()
-            .collect(Collectors.toMap(
-                view -> YearMonth.of(view.getYr(), view.getMth()),
-                view -> view));
+            .collect(Collectors.toMap(DailyRevenueView::getDy, view -> view));
 
-        List<DashboardCharts.MonthlyPoint> trend = new ArrayList<>();
-        for (int offset = TREND_MONTHS - 1; offset >= 0; offset--) {
-            YearMonth month = YearMonth.from(firstOfThisMonth.minusMonths(offset));
-            MonthlyRevenueView view = byMonth.get(month);
-            // Tháng không có đơn nào vẫn phải xuất hiện với giá trị 0: bỏ hẳn cột sẽ làm trục
-            // thời gian nói dối, nhìn như tháng đó không tồn tại.
-            trend.add(new DashboardCharts.MonthlyPoint(
-                "%02d/%d".formatted(month.getMonthValue(), month.getYear()),
-                view == null ? 0L : view.getBookingCount(),
-                view == null ? BigDecimal.ZERO : view.getRevenue()));
+        List<DailyRevenue.DailyPoint> days = new ArrayList<>();
+        long totalBookings = 0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        // Đủ mọi ngày của tháng (28/29/30/31), ngày không có đơn mang giá trị 0 — cùng lý do với
+        // biểu đồ 6 tháng: bỏ cột đi thì trục thời gian nói dối.
+        for (int day = 1; day <= month.lengthOfMonth(); day++) {
+            DailyRevenueView view = byDay.get(day);
+            long count = view == null ? 0L : view.getBookingCount();
+            BigDecimal revenue = view == null ? BigDecimal.ZERO : view.getRevenue();
+            days.add(new DailyRevenue.DailyPoint(
+                day, "%02d/%02d".formatted(day, month.getMonthValue()), count, revenue));
+            totalBookings += count;
+            totalRevenue = totalRevenue.add(revenue);
         }
 
-        List<DashboardCharts.TourRevenue> topTours =
-            bookingRepository.revenueByTourSince(firstOfThisMonth.atStartOfDay()).stream()
-                .limit(TOP_TOURS)
-                .map(view -> new DashboardCharts.TourRevenue(view.getTourTitle(), view.getRevenue()))
-                .toList();
-
-        return new DashboardCharts(trend, topTours);
+        return new DailyRevenue(month.toString(), current.toString(), totalBookings, totalRevenue, days);
     }
 
     @Transactional(readOnly = true)

@@ -1,12 +1,14 @@
 package demo.tripgo.admin.excel;
 
 import demo.tripgo.excel.ExcelColumn;
+import demo.tripgo.excel.ExcelFormats;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
 
-// Cột trùng khớp với TourImportRow để file xuất ra sửa xong nhập lại được luôn.
+// Cột trùng khớp với TourImportRow để file xuất ra sửa xong nhập lại được luôn. Vì vậy đơn vị
+// VNĐ nằm ở định dạng ô chứ không ở tiêu đề: đổi thành "Giá (VNĐ)" thì nhập lại sẽ báo thiếu cột "Giá".
 @Getter
 @Setter
 public class TourExportRow {
@@ -26,16 +28,17 @@ public class TourExportRow {
     @ExcelColumn(header = "Loại hình", order = 5)
     private String category;
 
-    @ExcelColumn(header = "Giá", order = 6)
+    @ExcelColumn(header = "Giá", order = 6, format = ExcelFormats.VND)
     private BigDecimal price;
 
-    @ExcelColumn(header = "Giá khuyến mãi", order = 7)
+    @ExcelColumn(header = "Giá khuyến mãi", order = 7, format = ExcelFormats.VND)
     private BigDecimal discountPrice;
 
     @ExcelColumn(header = "Số ngày", order = 8)
     private Integer durationDays;
 
-    @ExcelColumn(header = "Đánh giá", order = 9)
+    // ExcelExportService đã làm tròn 1 chữ số; format chỉ để 4 hiện thành 4.0.
+    @ExcelColumn(header = "Đánh giá", order = 9, format = ExcelFormats.ONE_DECIMAL)
     private Double rating;
 
     @ExcelColumn(header = "Lượt đánh giá", order = 10)

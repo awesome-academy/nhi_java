@@ -1,22 +1,31 @@
 package demo.tripgo.admin;
 
+import demo.tripgo.dto.response.BookingResponse;
 import demo.tripgo.entity.Booking;
 import demo.tripgo.entity.BookingStatus;
+import demo.tripgo.entity.Tour;
 import demo.tripgo.exception.BookingAlreadyCancelledException;
 import demo.tripgo.exception.InvalidBookingRequestException;
+import demo.tripgo.exception.ResourceNotFoundException;
+import demo.tripgo.exception.SoldOutException;
 import demo.tripgo.service.BookingAdminService;
 import demo.tripgo.service.ExcelExportService;
+import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/bookings")
@@ -54,6 +63,59 @@ public class AdminBookingController {
         model.addAttribute("totalPages", Math.max(bookings.getTotalPages(), 1));
         model.addAttribute("total", bookings.getTotalElements());
         return "admin/bookings/list";
+    }
+
+    // ---- Admin tạo đơn hộ khách ----
+
+    // Chọn tour trước (GET ?tourId=) rồi mới hiện các ngày khởi hành của tour đó. Tải lại trang
+    // thay vì gọi AJAX: không phụ thuộc JavaScript, và URL mang theo tour đang chọn.
+    @GetMapping("/new")
+    public String createForm(@RequestParam(required = false) Long tourId, Model model) {
+        AdminBookingForm form = new AdminBookingForm();
+        form.setTourId(tourId);
+        prepareForm(model, form);
+        return "admin/bookings/form";
+    }
+
+    @PostMapping
+    public String create(
+        @Valid @ModelAttribute("form") AdminBookingForm form,
+        BindingResult binding,
+        Model model,
+        RedirectAttributes redirect
+    ) {
+        if (binding.hasErrors()) {
+            prepareForm(model, form);
+            return "admin/bookings/form";
+        }
+        try {
+            BookingResponse booking = bookingAdminService.createForCustomer(form);
+            redirect.addFlashAttribute("flashMessage",
+                "Đã tạo đơn " + booking.code() + " cho " + form.getCustomerEmail().trim() + ", đang chờ xác nhận");
+            redirect.addFlashAttribute("flashType", "success");
+            return "redirect:/admin/bookings";
+        } catch (InvalidBookingRequestException | SoldOutException | ResourceNotFoundException exception) {
+            // Hết chỗ, khách không tồn tại, tour vừa bị xoá... là tình huống nghiệp vụ bình thường:
+            // báo lại ngay trên form, giữ nguyên dữ liệu đã nhập.
+            binding.reject("booking.invalid", exception.getMessage());
+            prepareForm(model, form);
+            return "admin/bookings/form";
+        }
+    }
+
+    private void prepareForm(Model model, AdminBookingForm form) {
+        model.addAttribute("form", form);
+        model.addAttribute("activeMenu", "bookings");
+        model.addAttribute("pageHeading", "Tạo đơn đặt tour");
+        List<Tour> tours = bookingAdminService.bookableTours();
+        model.addAttribute("tours", tours);
+        // null khi chưa chọn hoặc tourId không còn bán (vào thùng rác, sửa tay URL).
+        model.addAttribute("selectedTour", tours.stream()
+            .filter(tour -> tour.getId().equals(form.getTourId()))
+            .findFirst()
+            .orElse(null));
+        model.addAttribute("departures", bookingAdminService.upcomingDepartures(form.getTourId()));
+        model.addAttribute("customers", bookingAdminService.bookableCustomers());
     }
 
     // Xuất đúng bộ lọc đang xem, nên URL nhận cùng tham số status với trang danh sách.

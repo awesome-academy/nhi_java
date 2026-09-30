@@ -20,6 +20,9 @@ public interface TourRepository extends JpaRepository<Tour, Long>, JpaSpecificat
     @Query("select t from Tour t where t.id = :id and t.deletedAt is null")
     Optional<Tour> findActiveById(@Param("id") Long id);
 
+    // Ô chọn tour của form admin tạo đơn: chỉ tour đang bán (chưa vào thùng rác).
+    java.util.List<Tour> findByDeletedAtIsNullOrderByTitleAsc();
+
     // Fetch join điểm đến + loại hình + ảnh trong một truy vấn để dựng màn chi tiết, tránh N+1.
     @Query("""
         select t from Tour t

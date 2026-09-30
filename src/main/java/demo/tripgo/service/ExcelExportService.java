@@ -2,22 +2,19 @@ package demo.tripgo.service;
 
 import demo.tripgo.admin.AdminBookingRow;
 import demo.tripgo.admin.excel.BookingExportRow;
-import demo.tripgo.admin.excel.RevenueExportRow;
 import demo.tripgo.admin.excel.TourExportRow;
 import demo.tripgo.dto.request.TourListRequest;
 import demo.tripgo.dto.response.TourSummaryResponse;
 import demo.tripgo.entity.BookingStatus;
 import demo.tripgo.excel.ExcelMapper;
-import demo.tripgo.repository.BookingRepository;
-import demo.tripgo.repository.RevenueByTourView;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
-// Dựng file Excel cho ba màn quản trị. Mỗi hàm chỉ lấy dữ liệu rồi map sang lớp *ExportRow;
+// Dựng file Excel cho hai màn quản trị (đơn đặt, tour). Mỗi hàm chỉ lấy dữ liệu rồi map sang lớp *ExportRow;
 // phần ghi workbook do ExcelMapper lo.
 @Service
 public class ExcelExportService {
@@ -29,18 +26,15 @@ public class ExcelExportService {
     private final ExcelMapper excelMapper;
     private final BookingAdminService bookingAdminService;
     private final TourService tourService;
-    private final BookingRepository bookingRepository;
 
     public ExcelExportService(
         ExcelMapper excelMapper,
         BookingAdminService bookingAdminService,
-        TourService tourService,
-        BookingRepository bookingRepository
+        TourService tourService
     ) {
         this.excelMapper = excelMapper;
         this.bookingAdminService = bookingAdminService;
         this.tourService = tourService;
-        this.bookingRepository = bookingRepository;
     }
 
     // Xuất theo ĐÚNG bộ lọc admin đang xem, không phải xuất tất cả: lọc xong rồi mới muốn gửi
@@ -62,15 +56,6 @@ public class ExcelExportService {
             .map(this::toTourRow)
             .toList();
         return excelMapper.write(rows, TourExportRow.class, "Tour");
-    }
-
-    @Transactional(readOnly = true)
-    public byte[] exportMonthlyRevenue() {
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        List<RevenueExportRow> rows = bookingRepository.revenueByTourSince(startOfMonth).stream()
-            .map(this::toRevenueRow)
-            .toList();
-        return excelMapper.write(rows, RevenueExportRow.class, "Doanh thu tháng");
     }
 
     private BookingExportRow toBookingRow(AdminBookingRow booking) {
@@ -97,17 +82,14 @@ public class ExcelExportService {
         row.setPrice(tour.price());
         row.setDiscountPrice(tour.discountPrice());
         row.setDurationDays(tour.durationDays());
-        row.setRating(tour.rating());
+        row.setRating(roundToOneDecimal(tour.rating()));
         row.setReviewCount(tour.reviewCount());
         return row;
     }
 
-    private RevenueExportRow toRevenueRow(RevenueByTourView view) {
-        RevenueExportRow row = new RevenueExportRow();
-        row.setTourTitle(view.getTourTitle());
-        row.setBookingCount(view.getBookingCount());
-        row.setGuestCount(view.getGuestCount());
-        row.setRevenue(view.getRevenue());
-        return row;
+    // Làm tròn thật (4.35 -> 4.4) chứ không chỉ định dạng hiển thị: định dạng ô thì Excel vẫn giữ
+    // 4.3333... bên trong, bấm vào ô là thấy số dài. Qua BigDecimal để tránh sai số của double.
+    private static double roundToOneDecimal(double value) {
+        return BigDecimal.valueOf(value).setScale(1, RoundingMode.HALF_UP).doubleValue();
     }
 }

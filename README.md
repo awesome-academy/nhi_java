@@ -129,7 +129,6 @@ tài khoản đó** để giữ nguyên wishlist và đơn hàng cũ.
 |---|---|---|
 | `/admin/bookings` | Xuất Excel | Đơn theo **đúng bộ lọc đang xem** |
 | `/admin/tours` | Xuất Excel | Tour theo từ khoá đang tìm |
-| `/admin` | Xuất doanh thu tháng | Doanh thu gộp theo tour, bỏ qua đơn đã huỷ |
 
 Tầng Excel (`demo.tripgo.excel`) dùng chung cho mọi loại dữ liệu: gắn `@ExcelColumn` lên field,
 `ExcelMapper` đọc bằng reflection rồi tự sinh file. Thêm loại mới không phải viết code đọc/ghi.
@@ -194,14 +193,15 @@ bi quan) chỉ tồn tại ở một nơi.
 
 ## 2e. Biểu đồ dashboard
 
-Hai biểu đồ (Chart.js): doanh thu 6 tháng gần nhất, và 5 tour doanh thu cao nhất tháng này.
-Dữ liệu lấy từ `GET /admin/reports/charts`.
+Một biểu đồ (Chart.js): doanh thu theo từng ngày đặt đơn của một tháng, chọn tháng bằng ô chọn
+(không chọn được tháng tương lai), không tính đơn đã huỷ.
+Dữ liệu lấy từ `GET /admin/reports/revenue-daily?month=yyyy-MM`.
 
-Mỗi biểu đồ chỉ có **một** chuỗi số liệu nên dùng **một màu** — tô mỗi cột một màu khi chúng cùng
+Biểu đồ chỉ có **một** chuỗi số liệu nên dùng **một màu** — tô mỗi cột một màu khi chúng cùng
 ý nghĩa là gán màu theo thứ hạng chứ không theo dữ liệu. Màu khai trong `admin.css` dưới dạng
 custom property (`--viz-*`) để JS đọc lại, nhờ vậy bảng màu chỉ tồn tại ở một chỗ.
 
-Mỗi biểu đồ kèm một bảng số liệu (`Xem dạng bảng`): biểu đồ không được là cách duy nhất đọc được
+Biểu đồ kèm một bảng số liệu (`Xem dạng bảng`): biểu đồ không được là cách duy nhất đọc được
 con số.
 
 ## 2e2. Nhập tour từ Excel

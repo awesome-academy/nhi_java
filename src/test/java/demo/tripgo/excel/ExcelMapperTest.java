@@ -73,6 +73,37 @@ class ExcelMapperTest {
         }
     }
 
+    @Getter
+    @Setter
+    public static class PricedRow {
+        @ExcelColumn(header = "Giá", order = 1, format = ExcelFormats.VND)
+        private BigDecimal price;
+
+        @ExcelColumn(header = "Ngày đi", order = 2)
+        private LocalDate date;
+    }
+
+    // format chỉ đổi cách HIỂN THỊ: ô vẫn là số (Excel cộng được) và đọc lại ra đúng giá trị.
+    // Cột không khai format (ngày đi) vẫn giữ định dạng ngày mặc định.
+    @Test
+    void columnFormatKeepsNumericValueAndReadsBack() throws Exception {
+        PricedRow row = new PricedRow();
+        row.setPrice(new BigDecimal("4500000"));
+        row.setDate(LocalDate.of(2026, 1, 31));
+
+        byte[] file = mapper.write(List.of(row), PricedRow.class, "Sheet1");
+
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(file))) {
+            Row data = workbook.getSheetAt(0).getRow(1);
+            assertThat(data.getCell(0).getNumericCellValue()).isEqualTo(4_500_000d);
+            assertThat(data.getCell(0).getCellStyle().getDataFormatString()).isEqualTo(ExcelFormats.VND);
+            assertThat(data.getCell(1).getCellStyle().getDataFormatString()).isEqualTo("dd/mm/yyyy");
+        }
+
+        var read = mapper.read(new ByteArrayInputStream(file), PricedRow.class);
+        assertThat(read.rows().getFirst().value().getPrice()).isEqualByComparingTo("4500000");
+    }
+
     // ---- Đọc ----
 
     @Test

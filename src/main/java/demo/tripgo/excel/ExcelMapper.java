@@ -59,7 +59,8 @@ public class ExcelMapper {
                     continue;
                 }
                 field.setAccessible(true);
-                fields.add(new ExcelField(field, column.header(), column.order(), column.required()));
+                fields.add(new ExcelField(
+                    field, column.header(), column.order(), column.required(), column.format()));
             }
         }
         if (fields.isEmpty()) {
@@ -213,7 +214,13 @@ public class ExcelMapper {
 
             Sheet sheet = workbook.createSheet(sheetName);
             CellStyle headerStyle = headerStyle(workbook);
-            CellStyle dateStyle = dateStyle(workbook);
+            CellStyle dateStyle = formatStyle(workbook, DATE_PATTERN);
+            // Style dựng một lần cho mỗi cột rồi dùng lại: tạo mới cho từng ô sẽ chạm giới hạn
+            // khoảng 64.000 style của một file .xlsx khi xuất vài nghìn dòng.
+            List<CellStyle> columnStyles = new ArrayList<>();
+            for (ExcelField field : fields) {
+                columnStyles.add(field.format().isBlank() ? null : formatStyle(workbook, field.format()));
+            }
 
             Row headerRow = sheet.createRow(0);
             for (int column = 0; column < fields.size(); column++) {
@@ -226,7 +233,8 @@ public class ExcelMapper {
                 Row row = sheet.createRow(index + 1);
                 T item = rows.get(index);
                 for (int column = 0; column < fields.size(); column++) {
-                    fill(row.createCell(column), fields.get(column).read(item), dateStyle);
+                    fill(row.createCell(column), fields.get(column).read(item),
+                        columnStyles.get(column), dateStyle);
                 }
             }
 
@@ -245,7 +253,8 @@ public class ExcelMapper {
         }
     }
 
-    private void fill(Cell cell, Object value, CellStyle dateStyle) {
+    // columnStyle (nếu có) là định dạng riêng của cột, được ưu tiên hơn định dạng ngày mặc định.
+    private void fill(Cell cell, Object value, CellStyle columnStyle, CellStyle dateStyle) {
         switch (value) {
             case null -> cell.setBlank();
             // BigDecimal xuống double có thể mất chính xác với số rất lớn, nhưng tiền VND trong
@@ -255,14 +264,19 @@ public class ExcelMapper {
             case Boolean bool -> cell.setCellValue(bool);
             case LocalDateTime dateTime -> {
                 cell.setCellValue(dateTime);
-                cell.setCellStyle(dateStyle);
+                cell.setCellStyle(columnStyle != null ? columnStyle : dateStyle);
+                return;
             }
             case LocalDate date -> {
                 cell.setCellValue(date);
-                cell.setCellStyle(dateStyle);
+                cell.setCellStyle(columnStyle != null ? columnStyle : dateStyle);
+                return;
             }
             case Enum<?> enumValue -> cell.setCellValue(enumValue.name().toLowerCase(Locale.ROOT));
             default -> cell.setCellValue(String.valueOf(value));
+        }
+        if (columnStyle != null) {
+            cell.setCellStyle(columnStyle);
         }
     }
 
@@ -274,10 +288,10 @@ public class ExcelMapper {
         return style;
     }
 
-    private CellStyle dateStyle(Workbook workbook) {
+    private CellStyle formatStyle(Workbook workbook, String format) {
         CellStyle style = workbook.createCellStyle();
         style.setDataFormat(
-            workbook.getCreationHelper().createDataFormat().getFormat(DATE_PATTERN));
+            workbook.getCreationHelper().createDataFormat().getFormat(format));
         return style;
     }
 

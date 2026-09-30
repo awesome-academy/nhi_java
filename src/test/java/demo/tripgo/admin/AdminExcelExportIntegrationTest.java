@@ -9,6 +9,7 @@ import demo.tripgo.entity.Destination;
 import demo.tripgo.entity.Role;
 import demo.tripgo.entity.Tour;
 import demo.tripgo.entity.User;
+import demo.tripgo.excel.ExcelFormats;
 import demo.tripgo.repository.BookingRepository;
 import demo.tripgo.repository.CategoryRepository;
 import demo.tripgo.repository.DepartureRepository;
@@ -99,6 +100,7 @@ class AdminExcelExportIntegrationTest {
             "Mã đơn", "Khách", "Email", "Tour", "Ngày đi", "Số khách", "Tổng tiền", "Trạng thái");
         assertThat(rows).hasSize(2);
         assertThat(rows.get(1)).contains("Đà Nẵng 3N2Đ", "Chờ xác nhận");
+        assertThat(formatOf(result.getResponse().getContentAsByteArray(), 6)).isEqualTo(ExcelFormats.VND);
     }
 
     // Xuất phải theo ĐÚNG bộ lọc đang xem, không phải xuất tất cả.
@@ -134,23 +136,24 @@ class AdminExcelExportIntegrationTest {
         assertThat(dataRowCount(export("/admin/tours/export?q=sapa"))).isEqualTo(1);
     }
 
-    // ---- Doanh thu ----
-
+    // Giá và giá khuyến mãi hiện kèm VNĐ nhưng vẫn là số; điểm đánh giá làm tròn thật 1 chữ số.
     @Test
     @WithMockUser(roles = "ADMIN")
-    void exportsMonthlyRevenueGroupedByTourIgnoringCancelled() throws Exception {
-        saveBooking(BookingStatus.CONFIRMED, "2000000");
-        saveBooking(BookingStatus.PENDING, "3000000");
-        saveBooking(BookingStatus.CANCELLED, "9000000");
+    void tourExportFormatsPriceInVndAndRoundsRating() throws Exception {
+        tour.setDiscountPrice(new BigDecimal("3990000"));
+        tour.setRatingAvg(4.35);
+        tours.save(tour);
 
-        List<List<String>> rows = readSheet(export("/admin/reports/revenue/export"));
+        byte[] file = export("/admin/tours/export");
+        List<List<String>> rows = readSheet(file);
 
-        assertThat(rows.getFirst()).containsExactly("Tour", "Số đơn", "Số khách", "Doanh thu");
-        assertThat(rows).hasSize(2);
-        assertThat(rows.get(1).getFirst()).isEqualTo("Đà Nẵng 3N2Đ");
-        assertThat(rows.get(1).get(1)).isEqualTo("2");
-        // 2.000.000 + 3.000.000, đơn huỷ không tính.
-        assertThat(rows.get(1).get(3)).isEqualTo("5000000");
+        assertThat(rows.get(1).get(5)).isEqualTo("4500000");
+        assertThat(rows.get(1).get(6)).isEqualTo("3990000");
+        assertThat(formatOf(file, 5)).isEqualTo(ExcelFormats.VND);
+        assertThat(formatOf(file, 6)).isEqualTo(ExcelFormats.VND);
+        // 4.35 -> 4.4 (HALF_UP); giá trị trong ô là 4.4 thật, không phải 4.35 hiển thị thành 4.4.
+        assertThat(rows.get(1).get(8)).isEqualTo("4.4");
+        assertThat(formatOf(file, 8)).isEqualTo(ExcelFormats.ONE_DECIMAL);
     }
 
     // ---- Bảo vệ ----
@@ -176,6 +179,15 @@ class AdminExcelExportIntegrationTest {
             .andReturn()
             .getResponse()
             .getContentAsByteArray();
+    }
+
+    // Mã định dạng của ô dữ liệu đầu tiên ở cột column.
+    private String formatOf(byte[] file, int column) {
+        try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(file))) {
+            return workbook.getSheetAt(0).getRow(1).getCell(column).getCellStyle().getDataFormatString();
+        } catch (Exception exception) {
+            throw new IllegalStateException("File xuất ra không đọc được", exception);
+        }
     }
 
     private int dataRowCount(byte[] file) {

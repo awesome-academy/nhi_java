@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Tạo đơn đặt tour · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Tạo đơn đặt tour</h1>
+        <a th:href="@{/admin/bookings}" class="btn-secondary">← Về danh sách đơn</a>
+    </div>
+
+    <!--/* Bước 1: chọn tour. Form GET riêng: đổi tour thì tải lại trang để lấy đúng các ngày
+           khởi hành của tour đó. onchange chỉ để khỏi bấm nút; tắt JS vẫn bấm "Chọn" được. */-->
+    <form th:action="@{/admin/bookings/new}" method="get" class="form-card booking-step">
+        <div class="form-row">
+            <label for="pickTour">Tour <span class="required">*</span></label>
+            <div class="inline-pick">
+                <select id="pickTour" name="tourId" onchange="this.form.submit()">
+                    <option value="">— Chọn tour —</option>
+                    <option th:each="t : ${tours}" th:value="${t.id}" th:text="${t.title}"
+                            th:selected="${form.tourId != null and form.tourId == t.id}">Đà Nẵng 3N2Đ</option>
+                </select>
+                <button type="submit" class="btn-secondary">Chọn</button>
+            </div>
+            <p class="field-hint" th:if="${tours.isEmpty()}">Chưa có tour nào đang bán.</p>
+        </div>
+    </form>
+
+    <!--/* Bước 2: chỉ hiện khi đã chọn tour. */-->
+    <th:block th:if="${form.tourId != null}" th:with="selected=${selectedTour}">
+
+        <p class="form-card booking-empty" th:if="${selected == null}">
+            Tour này không còn bán. Hãy chọn tour khác.
+        </p>
+
+        <p class="form-card booking-empty" th:if="${selected != null and departures.isEmpty()}">
+            Tour này chưa có ngày khởi hành nào sắp tới còn chỗ.
+        </p>
+
+        <form th:if="${selected != null and !departures.isEmpty()}"
+              th:action="@{/admin/bookings}" th:object="${form}" method="post" class="form-card" novalidate>
+
+            <input type="hidden" th:field="*{tourId}">
+
+            <!--/* Lỗi nghiệp vụ không gắn với ô nào: hết chỗ, không có tài khoản khách... */-->
+            <div class="form-global-error" th:if="${#fields.hasGlobalErrors()}">
+                <p th:each="err : ${#fields.globalErrors()}" th:text="${err}">Lỗi</p>
+            </div>
+
+            <p class="field-hint booking-price">
+                Giá mỗi khách:
+                <strong th:text="${#numbers.formatInteger(selected.discountPrice != null ? selected.discountPrice : selected.price, 0, 'POINT')} + ' đ'">0 đ</strong>
+                <span th:if="${selected.discountPrice != null}">(giá khuyến mãi)</span>
+                · Tổng tiền do hệ thống tự tính khi lưu.
+            </p>
+
+            <div class="form-row">
+                <label for="departureDate">Ngày khởi hành <span class="required">*</span></label>
+                <select id="departureDate" th:field="*{departureDate}">
+                    <option value="">— Chọn ngày —</option>
+                    <option th:each="d : ${departures}"
+                            th:value="${d.date}"
+                            th:text="${#temporals.format(d.date, 'dd/MM/yyyy')} + ' — còn ' + ${d.remainingSeats} + ' chỗ'">01/01/2026</option>
+                </select>
+                <p class="field-error" th:if="${#fields.hasErrors('departureDate')}" th:errors="*{departureDate}">Lỗi</p>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-row">
+                    <label for="adults">Người lớn <span class="required">*</span></label>
+                    <input type="number" id="adults" th:field="*{adults}" min="1" max="100">
+                    <p class="field-error" th:if="${#fields.hasErrors('adults')}" th:errors="*{adults}">Lỗi</p>
+                </div>
+                <div class="form-row">
+                    <label for="children">Trẻ em <span class="required">*</span></label>
+                    <input type="number" id="children" th:field="*{children}" min="0" max="100">
+                    <p class="field-error" th:if="${#fields.hasErrors('children')}" th:errors="*{children}">Lỗi</p>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <label for="customerEmail">Email tài khoản khách <span class="required">*</span></label>
+                <select id="customerEmail" th:field="*{customerEmail}">
+                    <option value="">— Chọn khách —</option>
+                    <option th:each="c : ${customers}" th:value="${c.email}"
+                            th:text="${c.email} + ' — ' + ${c.fullName}">khach@example.com — Nguyễn Văn Khách</option>
+                </select>
+                <p class="field-hint" th:if="${customers.isEmpty()}">Chưa có tài khoản khách nào đang hoạt động.</p>
+                <p class="field-hint">Chỉ hiện khách đang hoạt động. Đơn sẽ hiện trong "Đơn của tôi" của khách.</p>
+                <p class="field-error" th:if="${#fields.hasErrors('customerEmail')}" th:errors="*{customerEmail}">Lỗi</p>
+            </div>
+
+            <fieldset class="booking-contact">
+                <legend>Thông tin liên hệ</legend>
+
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label for="contactName">Họ tên <span class="required">*</span></label>
+                        <input type="text" id="contactName" th:field="*{contactName}" maxlength="100">
+                        <p class="field-error" th:if="${#fields.hasErrors('contactName')}" th:errors="*{contactName}">Lỗi</p>
+                    </div>
+                    <div class="form-row">
+                        <label for="contactPhone">Số điện thoại <span class="required">*</span></label>
+                        <input type="tel" id="contactPhone" th:field="*{contactPhone}" placeholder="0901234567">
+                        <p class="field-error" th:if="${#fields.hasErrors('contactPhone')}" th:errors="*{contactPhone}">Lỗi</p>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label for="contactEmail">Email liên hệ <span class="required">*</span></label>
+                    <input type="email" id="contactEmail" th:field="*{contactEmail}">
+                    <p class="field-hint">Mail xác nhận đặt tour sẽ gửi tới địa chỉ này.</p>
+                    <p class="field-error" th:if="${#fields.hasErrors('contactEmail')}" th:errors="*{contactEmail}">Lỗi</p>
+                </div>
+
+                <div class="form-row">
+                    <label for="note">Ghi chú</label>
+                    <textarea id="note" th:field="*{note}" rows="3" maxlength="500"></textarea>
+                    <p class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}">Lỗi</p>
+                </div>
+            </fieldset>
+
+            <p class="field-hint">Đơn tạo ở trạng thái <strong>Chờ xác nhận</strong>, giống khách tự đặt.</p>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Tạo đơn</button>
+                <a th:href="@{/admin/bookings}" class="btn-secondary">Huỷ</a>
+            </div>
+        </form>
+    </th:block>
+
+</main>
+</body>
+</html>

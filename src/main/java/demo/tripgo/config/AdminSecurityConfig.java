@@ -1,5 +1,6 @@
 package demo.tripgo.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -16,7 +17,7 @@ import org.springframework.security.web.csrf.CsrfException;
 //                 chain API (SecurityConfig)   chain admin (file này)
 //   Phiên         STATELESS                    có session (form login)
 //   CSRF          tắt (không dùng cookie)      BẬT (form Thymeleaf tự chèn token)
-//   Xác thực      Bearer JWT                   form email + mật khẩu
+//   Xác thực      Bearer JWT                   form email + mật khẩu (+ Facebook nếu bật)
 //   Quyền         authenticated()              hasRole("ADMIN")
 //
 // securityMatcher giới hạn chain này đúng /admin/**, nên API không bị ảnh hưởng gì.
@@ -28,7 +29,10 @@ public class AdminSecurityConfig {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public SecurityFilterChain adminSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain adminSecurityFilterChain(
+        HttpSecurity http,
+        ObjectProvider<AdminSocialLogin> socialLogin
+    ) throws Exception {
         http
             .securityMatcher(ADMIN_BASE + "/**")
             // CSRF bật mặc định: đây là chỗ áp dụng đúng nghĩa, vì có form + session cookie.
@@ -51,6 +55,12 @@ public class AdminSecurityConfig {
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID"))
             .exceptionHandling(exceptions -> exceptions.accessDeniedHandler(accessDeniedHandler()));
+
+        // Chỉ có khi đã cấu hình FACEBOOK_CLIENT_ID (xem SocialLoginConfig).
+        AdminSocialLogin facebook = socialLogin.getIfAvailable();
+        if (facebook != null) {
+            facebook.configure(http);
+        }
 
         return http.build();
     }

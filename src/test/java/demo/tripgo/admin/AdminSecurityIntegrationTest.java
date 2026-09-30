@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.logout;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -73,7 +74,9 @@ class AdminSecurityIntegrationTest {
         mvc.perform(get("/admin/login"))
             .andExpect(status().isOk())
             .andExpect(view().name("admin/login"))
-            .andExpect(content().string(containsString("TripGo Admin")));
+            .andExpect(content().string(containsString("TripGo Admin")))
+            // Profile test không cấu hình Facebook -> không hiện nút bấm vào chỉ để nhận lỗi.
+            .andExpect(content().string(not(containsString("Đăng nhập bằng Facebook"))));
     }
 
     // ---- AC: chỉ tài khoản role=admin vào được ----

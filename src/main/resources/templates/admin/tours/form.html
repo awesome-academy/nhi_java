@@ -158,7 +158,9 @@
         </div>
     </form>
 
+    <!--/* Script PHẢI nằm trong <main>: layout chỉ nhúng <title> và <main> của trang con
+           (page(~{::title}, ~{::main})), thẻ nào đặt sau </main> sẽ bị bỏ khi render. */-->
+    <script th:src="@{/js/admin-itinerary.js}"></script>
 </main>
-<script th:src="@{/js/admin-itinerary.js}"></script>
 </body>
 </html>

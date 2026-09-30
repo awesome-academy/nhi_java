@@ -1,5 +1,7 @@
 package demo.tripgo.admin;
 
+import demo.tripgo.config.AdminSocialLogin;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +12,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class AdminLoginController {
 
+    private static final String FACEBOOK_ERROR = "facebook";
+
+    // Có bean này nghĩa là đăng nhập Facebook đã bật; không có thì ẩn nút, tránh một nút bấm vào
+    // chỉ để nhận lỗi.
+    private final boolean facebookLoginEnabled;
+
+    public AdminLoginController(ObjectProvider<AdminSocialLogin> socialLogin) {
+        this.facebookLoginEnabled = socialLogin.getIfAvailable() != null;
+    }
+
     @GetMapping("/admin/login")
     public String loginPage(
         @RequestParam(required = false) String error,
@@ -17,7 +29,12 @@ public class AdminLoginController {
         @RequestParam(required = false) String denied,
         Model model
     ) {
-        if (error != null) {
+        model.addAttribute("facebookLoginEnabled", facebookLoginEnabled);
+
+        if (FACEBOOK_ERROR.equals(error)) {
+            model.addAttribute("message", "Đăng nhập Facebook không thành công, vui lòng thử lại");
+            model.addAttribute("messageType", "error");
+        } else if (error != null) {
             model.addAttribute("message", "Email hoặc mật khẩu không đúng");
             model.addAttribute("messageType", "error");
         } else if (denied != null) {

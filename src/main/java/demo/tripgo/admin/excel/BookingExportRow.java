@@ -1,6 +1,7 @@
 package demo.tripgo.admin.excel;
 
 import demo.tripgo.excel.ExcelColumn;
+import demo.tripgo.excel.ExcelFormats;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,7 +31,7 @@ public class BookingExportRow {
     @ExcelColumn(header = "Số khách", order = 6)
     private Integer guests;
 
-    @ExcelColumn(header = "Tổng tiền", order = 7)
+    @ExcelColumn(header = "Tổng tiền", order = 7, format = ExcelFormats.VND)
     private BigDecimal totalPrice;
 
     @ExcelColumn(header = "Trạng thái", order = 8)

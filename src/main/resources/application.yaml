@@ -60,8 +60,10 @@ tasks:
     enabled: ${TASKS_ENABLED:true}
     # Đơn chờ xác nhận quá số giờ này sẽ bị tự huỷ và hoàn chỗ.
     expire-after-hours: ${BOOKING_EXPIRE_HOURS:72}
-    cancel-expired-delay: PT1H
-    refresh-rating-delay: PT6H
+    # Bao lâu job kiểm tra một lần (định dạng thời lượng: PT2M = 2 phút, PT30S = 30 giây, PT1H = 1 giờ).
+    # Chỉ đổi NHỊP kiểm tra, không làm đơn quá hạn nhanh hơn — cái đó là expire-after-hours.
+    cancel-expired-delay: ${BOOKING_EXPIRE_CHECK_INTERVAL:PT1H}
+    refresh-rating-delay: ${RATING_REFRESH_INTERVAL:PT6H}
     # Hoãn lần chạy đầu để không tranh tài nguyên với lúc ứng dụng vừa khởi động.
     initial-delay: PT2M
   executor:

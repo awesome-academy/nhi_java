@@ -49,6 +49,13 @@ public final class SearchText {
         return normalized.isEmpty() ? "%" : "%" + escapeLike(normalized) + "%";
     }
 
+    // Như likePattern nhưng GIỮ dấu, chỉ hạ chữ thường: dùng cho cột không có bản search_* đã bỏ
+    // dấu sẵn (vd tên/email trong bảng users), vì so pattern không dấu với cột có dấu sẽ trượt.
+    public static String likePatternKeepAccents(String keyword) {
+        String trimmed = keyword == null ? "" : WHITESPACE.matcher(keyword.trim()).replaceAll(" ");
+        return trimmed.isEmpty() ? "%" : "%" + escapeLike(trimmed.toLowerCase(Locale.ROOT)) + "%";
+    }
+
     // Escape ký tự đặc biệt của LIKE. Phải xử lý '\' trước để không escape lại chính escape char.
     private static String escapeLike(String value) {
         return value

@@ -29,6 +29,13 @@
 
         <button type="submit">Đăng nhập</button>
     </form>
+
+    <!--/* Link GET thường, không phải form: bước đầu OAuth2 chỉ là chuyển hướng sang Facebook,
+           chống giả mạo do tham số state lo (không cần token CSRF). */-->
+    <th:block th:if="${facebookLoginEnabled}">
+        <div class="login-divider"><span>hoặc</span></div>
+        <a th:href="@{/admin/oauth2/authorization/facebook}" class="login-facebook">Đăng nhập bằng Facebook</a>
+    </th:block>
 </div>
 
 </body>

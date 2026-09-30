@@ -150,19 +150,19 @@ class PostgresQueryDialectTest extends PostgresTestBase {
         assertThat(bookings.countByStatus(BookingStatus.PENDING)).isEqualTo(1);
     }
 
-    // extract(year/month from ...) là hàm hay khác nhau giữa các phương ngữ SQL.
+    // extract(day from ...) là hàm hay khác nhau giữa các phương ngữ SQL.
     @Test
-    void monthlyRevenueQueryRunsOnPostgres() {
+    void dailyRevenueQueryRunsOnPostgres() {
         LocalDateTime from = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        assertThat(bookings.revenueByMonthSince(from)).isEmpty();
+        LocalDateTime to = from.plusMonths(1);
+        assertThat(bookings.revenueByDayBetween(from, to)).isEmpty();
 
         saveBooking(BookingStatus.CONFIRMED, "2000000");
         saveBooking(BookingStatus.CANCELLED, "9000000");
 
-        var rows = bookings.revenueByMonthSince(from);
+        var rows = bookings.revenueByDayBetween(from, to);
         assertThat(rows).hasSize(1);
-        assertThat(rows.getFirst().getYr()).isEqualTo(LocalDate.now().getYear());
-        assertThat(rows.getFirst().getMth()).isEqualTo(LocalDate.now().getMonthValue());
+        assertThat(rows.getFirst().getDy()).isEqualTo(LocalDate.now().getDayOfMonth());
         assertThat(rows.getFirst().getRevenue()).isEqualByComparingTo("2000000");
     }
 

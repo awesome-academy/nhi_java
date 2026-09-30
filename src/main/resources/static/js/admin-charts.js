@@ -1,12 +1,13 @@
-// Hai biểu đồ trên dashboard. Dữ liệu lấy từ /admin/reports/charts.
+// Biểu đồ "Doanh thu theo ngày" trên dashboard. Dữ liệu lấy từ /admin/reports/revenue-daily và
+// tải lại mỗi lần đổi tháng.
 //
-// Mỗi biểu đồ chỉ có MỘT chuỗi số liệu nên dùng một màu duy nhất: tô mỗi cột một màu khác khi
+// Chỉ có MỘT chuỗi số liệu nên dùng một màu duy nhất: tô mỗi cột một màu khác khi
 // chúng cùng ý nghĩa là gán màu theo thứ hạng chứ không theo dữ liệu, và làm người đọc tưởng
 // màu mang thông tin gì đó.
 (function () {
-    const trendCanvas = document.getElementById('revenueTrend');
-    const topCanvas = document.getElementById('topTours');
-    if (!trendCanvas || !topCanvas || typeof Chart === 'undefined') {
+    const dailyCanvas = document.getElementById('dailyRevenue');
+    const monthInput = document.getElementById('dailyMonth');
+    if (!dailyCanvas || !monthInput || typeof Chart === 'undefined') {
         return;
     }
 
@@ -47,103 +48,112 @@
         ticks: { padding: 8, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
     };
 
-    fetch('/admin/reports/charts', { headers: { Accept: 'application/json' } })
-        .then((response) => {
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-            return response.json();
-        })
-        .then((data) => {
-            renderTrend(data.revenueByMonth || []);
-            renderTopTours(data.topTours || []);
-        })
-        .catch(() => {
-            // Hỏng dữ liệu thì ẩn biểu đồ đi, không để lại khung trắng khó hiểu.
-            document.querySelectorAll('.chart-box').forEach((box) => {
-                box.innerHTML = '<p class="chart-empty">Không tải được dữ liệu biểu đồ</p>';
+    let dailyChart = null;
+    let latestDailyRequest = 0;
+
+    monthInput.addEventListener('change', () => {
+        // Người dùng xoá trắng ô chọn tháng -> giữ nguyên biểu đồ đang xem.
+        if (monthInput.value) {
+            loadDaily(monthInput.value);
+        }
+    });
+    loadDaily(monthInput.value);
+
+    function loadDaily(month) {
+        // Đổi tháng liên tục thì các response có thể về lệch thứ tự: chỉ vẽ kết quả của lần chọn
+        // CUỐI, response trễ của lần trước bị bỏ qua.
+        const requestId = ++latestDailyRequest;
+        fetch('/admin/reports/revenue-daily?month=' + encodeURIComponent(month || ''),
+            { headers: { Accept: 'application/json' } })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
+            .then((data) => {
+                if (requestId === latestDailyRequest) {
+                    renderDaily(data);
+                }
+            })
+            .catch(() => {
+                if (requestId === latestDailyRequest) {
+                    dailyCanvas.hidden = true;
+                    document.getElementById('dailyError').hidden = false;
+                    document.getElementById('dailyTotal').textContent = '';
+                }
             });
-        });
+    }
 
-    function renderTrend(points) {
-        fillTable('revenueTrendTable', points, (p) => [p.label, p.bookingCount, formatMoney(p.revenue)]);
+    function renderDaily(data) {
+        // Server đổi tháng tương lai / sai định dạng về tháng hiện tại -> ô chọn hiện đúng tháng đó.
+        monthInput.value = data.month;
+        monthInput.max = data.maxMonth;
 
-        new Chart(trendCanvas, {
+        dailyCanvas.hidden = false;
+        document.getElementById('dailyError').hidden = true;
+        document.getElementById('dailyTotal').textContent =
+            'Tổng tháng ' + monthLabel(data.month) + ': ' + formatMoney(data.totalRevenue)
+            + ' · ' + data.totalBookings + ' đơn';
+        fillTable('dailyRevenueTable', data.days, (d) => [d.label, d.bookingCount, formatMoney(d.revenue)]);
+
+        const labels = data.days.map((d) => String(d.day));
+        const values = data.days.map((d) => d.revenue);
+
+        // Đã có biểu đồ thì chỉ thay dữ liệu: cột chuyển động sang tháng mới thay vì nháy trắng.
+        if (dailyChart) {
+            dailyChart.data.labels = labels;
+            dailyChart.data.datasets[0].data = values;
+            dailyChart.$days = data.days;
+            dailyChart.update();
+            return;
+        }
+
+        dailyChart = new Chart(dailyCanvas, {
             type: 'bar',
             data: {
-                labels: points.map((p) => p.label),
+                labels,
                 datasets: [{
                     label: 'Doanh thu',
-                    data: points.map((p) => p.revenue),
+                    data: values,
                     backgroundColor: SERIES,
-                    // Bo tròn đầu cột (đầu mang dữ liệu), chân cột giữ vuông vì nó neo vào trục 0.
-                    borderRadius: { topLeft: 4, topRight: 4 },
+                    borderRadius: { topLeft: 3, topRight: 3 },
                     borderSkipped: 'bottom',
-                    // Khe 2px màu nền giữa các cột, thay cho việc vẽ viền quanh cột.
                     borderColor: SURFACE,
                     borderWidth: { top: 0, left: 1, right: 1, bottom: 0 },
-                    maxBarThickness: 48
+                    maxBarThickness: 24
                 }]
             },
             options: baseOptions({
                 scales: {
-                    x: { ...axisChrome, grid: { display: false } },
+                    // 31 nhãn ngày không vừa hết: cho hiện tối đa 16 rồi tự bỏ bớt, không xoay chéo.
+                    x: { ...axisChrome, grid: { display: false },
+                         ticks: { ...axisChrome.ticks, maxTicksLimit: 16 } },
                     y: {
                         ...axisChrome,
                         beginAtZero: true,
                         ticks: { ...axisChrome.ticks, callback: compact }
                     }
                 },
+                tooltipTitle: (items) => 'Ngày ' + dailyChart.$days[items[0].dataIndex].label,
                 tooltip: (item) => [
                     formatMoney(item.parsed.y),
-                    item.raw !== null ? points[item.dataIndex].bookingCount + ' đơn' : ''
+                    dailyChart.$days[item.dataIndex].bookingCount + ' đơn'
                 ]
             })
         });
+        // Giữ danh sách ngày của lần vẽ hiện tại cho tooltip (đổi tháng thì thay theo ở trên).
+        dailyChart.$days = data.days;
     }
 
-    function renderTopTours(tours) {
-        fillTable('topToursTable', tours, (t) => [t.tourTitle, formatMoney(t.revenue)]);
-
-        if (tours.length === 0) {
-            topCanvas.hidden = true;
-            document.getElementById('topToursEmpty').hidden = false;
-            return;
-        }
-
-        new Chart(topCanvas, {
-            type: 'bar',
-            data: {
-                labels: tours.map((t) => t.tourTitle),
-                datasets: [{
-                    label: 'Doanh thu',
-                    data: tours.map((t) => t.revenue),
-                    backgroundColor: SERIES,
-                    borderRadius: { topRight: 4, bottomRight: 4 },
-                    borderSkipped: 'left',
-                    borderColor: SURFACE,
-                    borderWidth: { top: 1, bottom: 1 },
-                    maxBarThickness: 28
-                }]
-            },
-            options: baseOptions({
-                indexAxis: 'y',
-                scales: {
-                    x: {
-                        ...axisChrome,
-                        beginAtZero: true,
-                        ticks: { ...axisChrome.ticks, callback: compact }
-                    },
-                    y: { ...axisChrome, grid: { display: false } }
-                },
-                tooltip: (item) => formatMoney(item.parsed.x)
-            })
-        });
+    // "2026-09" -> "09/2026"
+    function monthLabel(month) {
+        const [year, mm] = month.split('-');
+        return mm + '/' + year;
     }
 
-    function baseOptions({ scales, tooltip, indexAxis }) {
+    function baseOptions({ scales, tooltip, tooltipTitle }) {
         return {
-            indexAxis: indexAxis || 'x',
             responsive: true,
             maintainAspectRatio: false,
             scales,
@@ -154,7 +164,7 @@
                     backgroundColor: INK,
                     padding: 10,
                     displayColors: false,
-                    callbacks: { label: tooltip }
+                    callbacks: tooltipTitle ? { title: tooltipTitle, label: tooltip } : { label: tooltip }
                 }
             },
             // Vùng bắt hover rộng hơn chính cột, để không phải trỏ trúng từng pixel.

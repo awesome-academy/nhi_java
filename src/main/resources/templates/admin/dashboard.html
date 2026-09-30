@@ -8,7 +8,6 @@
 <main class="admin-content">
     <div class="page-header">
         <h1 class="page-title">Dashboard</h1>
-        <a class="btn-secondary" th:href="@{/admin/reports/revenue/export}">⭳ Xuất doanh thu tháng</a>
     </div>
 
     <div class="stat-grid">
@@ -35,42 +34,36 @@
     </div>
 
     <section class="chart-grid">
-        <figure class="chart-card">
-            <figcaption>
-                <h2 class="chart-title">Doanh thu 6 tháng gần nhất</h2>
-                <p class="chart-note">Không tính đơn đã huỷ</p>
+        <!--/* Rộng hết hàng: 31 cột ngày cần chỗ, chen vào nửa hàng thì nhãn ngày dính vào nhau. */-->
+        <figure class="chart-card chart-card-wide">
+            <figcaption class="chart-caption-row">
+                <div>
+                    <h2 class="chart-title">Doanh thu theo ngày</h2>
+                    <p class="chart-note">Theo ngày đặt đơn · không tính đơn đã huỷ</p>
+                </div>
+                <div class="chart-controls">
+                    <label for="dailyMonth">Tháng</label>
+                    <!--/* max = tháng hiện tại: không chọn được tháng tương lai. Server cũng chặn lại. */-->
+                    <input type="month" id="dailyMonth" th:value="${currentMonth}" th:max="${currentMonth}">
+                </div>
             </figcaption>
-            <div class="chart-box"><canvas id="revenueTrend"></canvas></div>
-            <!--/* Bảng số liệu kèm theo: biểu đồ không được là cách DUY NHẤT đọc được con số
-                   (người dùng trình đọc màn hình, và cả lúc in ra giấy). */-->
+            <p class="chart-total" id="dailyTotal" aria-live="polite"></p>
+            <div class="chart-box"><canvas id="dailyRevenue"></canvas></div>
+            <p class="chart-empty" id="dailyError" hidden>Không tải được dữ liệu biểu đồ</p>
             <details class="chart-table">
                 <summary>Xem dạng bảng</summary>
-                <table class="data-table" id="revenueTrendTable">
-                    <thead><tr><th>Tháng</th><th class="num">Số đơn</th><th class="num">Doanh thu</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </details>
-        </figure>
-
-        <figure class="chart-card">
-            <figcaption>
-                <h2 class="chart-title">Tour doanh thu cao nhất tháng này</h2>
-                <p class="chart-note">Tối đa 5 tour</p>
-            </figcaption>
-            <div class="chart-box"><canvas id="topTours"></canvas></div>
-            <p class="chart-empty" id="topToursEmpty" hidden>Tháng này chưa có đơn nào</p>
-            <details class="chart-table">
-                <summary>Xem dạng bảng</summary>
-                <table class="data-table" id="topToursTable">
-                    <thead><tr><th>Tour</th><th class="num">Doanh thu</th></tr></thead>
+                <table class="data-table" id="dailyRevenueTable">
+                    <thead><tr><th>Ngày</th><th class="num">Số đơn</th><th class="num">Doanh thu</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </details>
         </figure>
     </section>
 
+    <!--/* Script PHẢI nằm trong <main>: layout chỉ nhúng <title> và <main> của trang con
+           (page(~{::title}, ~{::main})), thẻ nào đặt sau </main> sẽ bị bỏ khi render. */-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/admin-charts.js}"></script>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<script th:src="@{/js/admin-charts.js}"></script>
 </body>
 </html>

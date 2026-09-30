@@ -79,6 +79,15 @@ class AdminTourFormIntegrationTest {
             .andExpect(content().string(containsString("Biển đảo")));
     }
 
+    // Nút "+ Thêm ngày" chạy bằng JS. Script mà lọt ra ngoài <main> thì layout bỏ nó đi và nút
+    // bấm không có tác dụng gì.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void formPageLoadsItineraryScript() throws Exception {
+        mvc.perform(get("/admin/tours/new"))
+            .andExpect(content().string(containsString("/js/admin-itinerary.js")));
+    }
+
     // Kiểm qua model chứ không so chuỗi HTML: Thymeleaf escape ký tự có named entity khi render
     // attribute ("à" -> "&agrave;"), nên containsString trên value= sẽ trượt dù dữ liệu vẫn đúng.
     @Test

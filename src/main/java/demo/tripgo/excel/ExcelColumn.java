@@ -20,4 +20,8 @@ public @interface ExcelColumn {
 
     // Bắt buộc: thiếu cột này thì cả file bị từ chối, thiếu giá trị thì dòng đó báo lỗi.
     boolean required() default false;
+
+    // Định dạng hiển thị khi ghi file (mã định dạng số của Excel, vd ExcelFormats.VND). Bỏ trống
+    // thì để mặc định; lúc đọc file thì không dùng tới.
+    String format() default "";
 }

@@ -24,7 +24,7 @@
             Tour có slug trùng sẽ bị bỏ qua, không ghi đè.
         </p>
 
-        <p><a th:href="@{/admin/tours/import/template}" class="btn-secondary">⭳ Tải file mẫu</a></p>
+        <p><a th:href="@{/admin/tours/import/template}" class="btn-secondary"><i class="bi bi-download" aria-hidden="true"></i> Tải file mẫu</a></p>
 
         <div class="form-global-error" th:if="${errorMessage}">
             <p th:text="${errorMessage}">Lỗi</p>
@@ -36,7 +36,7 @@
                 <input type="file" id="file" name="file" accept=".xlsx,.xls" required>
             </div>
             <div class="form-actions">
-                <button type="submit" class="btn-primary">Nhập</button>
+                <button type="submit" class="btn-primary"><i class="bi bi-upload" aria-hidden="true"></i> Nhập</button>
             </div>
         </form>
     </div>
