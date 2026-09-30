@@ -108,12 +108,13 @@ jobs:
           echo "Channel = $SLACK_CHANNEL"
 
       # assign / request review -> "Đang review" (chỉ khi đang Chờ review)
-      # reviewer (không phải tác giả) submit review dạng Comment -> "Cần sửa"
-      - name: Move PR (assign -> Đang review, review comment -> Cần sửa)
+      # bất kỳ ai không phải tác giả PR comment (review Comment hoặc comment ở Conversation) -> "Cần sửa"
+      - name: Move PR (assign -> Đang review, comment -> Cần sửa)
         if: >-
           env.GH_PAT != '' && (
             (github.event_name == 'pull_request_target' && (github.event.action == 'assigned' || github.event.action == 'review_requested')) ||
-            (github.event_name == 'pull_request_review' && github.event.review.state == 'commented' && github.event.review.user.login != github.event.pull_request.user.login)
+            (github.event_name == 'pull_request_review' && github.event.review.state == 'commented' && github.event.review.user.login != github.event.pull_request.user.login) ||
+            (github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.login != github.event.issue.user.login)
           )
         continue-on-error: true
         env:
@@ -124,8 +125,10 @@ jobs:
               field(name:"Status"){ ... on ProjectV2SingleSelectField { id options { id name } } } } } }')
           PID=$(jq -r .data.organization.projectV2.id <<< "$PROJECT")
           FID=$(jq -r .data.organization.projectV2.field.id <<< "$PROJECT")
-          # assign / request review -> Đang review ; trainer review Comment -> Cần sửa
-          TARGET="$REVIEWING_STATUS"; [ "$EVENT" = "pull_request_review" ] && TARGET="$FIX_STATUS"
+          # assign / request review -> Đang review ; người khác tác giả comment (review hoặc conversation) -> Cần sửa
+          TARGET="$REVIEWING_STATUS"; [ "$EVENT" = "pull_request_review" ] || [ "$EVENT" = "issue_comment" ] && TARGET="$FIX_STATUS"
+          # issue_comment không có node_id của PR -> lấy qua API
+          if [ -z "$PR_NODE_ID" ]; then PR_NODE_ID=$(gh api "repos/$REPO/pulls/$PR_NUMBER" --jq .node_id); fi
           OID=$(jq -r --arg s "$TARGET" '.data.organization.projectV2.field.options[] | select(.name==$s) | .id' <<< "$PROJECT")
           [ -n "$OID" ] || { echo "Status option '$TARGET' not found on board"; exit 0; }
 
