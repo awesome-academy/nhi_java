@@ -33,7 +33,7 @@ public class WishlistService {
 
     @Transactional
     public WishlistResponse addTour(User user, Long tourId) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findActiveById(tourId)
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
         // Set.add trả false nếu đã có -> thêm trùng không sinh bản ghi lặp, cũng không báo lỗi
         // (thao tác idempotent, bấm tim hai lần vẫn chỉ là "đã thích").
@@ -62,8 +62,11 @@ public class WishlistService {
     }
 
     // Sắp theo id để thứ tự ổn định giữa các lần gọi (Set không đảm bảo thứ tự sau khi reload).
+    // Tour bị xoá mềm sau khi user đã lưu thì biến khỏi wishlist, nhưng hàng trong user_wishlist
+    // vẫn còn: khôi phục tour từ thùng rác là nó hiện lại đúng chỗ cũ.
     private WishlistResponse toResponse(User user) {
         List<Long> tourIds = user.getWishlist().stream()
+            .filter(tour -> !tour.isDeleted())
             .map(Tour::getId)
             .sorted(Comparator.naturalOrder())
             .toList();

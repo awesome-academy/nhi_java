@@ -117,7 +117,7 @@ public class TourService {
     // Ngày khởi hành & số chỗ còn. month=YYYY-MM lọc theo tháng; bỏ trống thì lấy các ngày sắp tới.
     public ListResponse<TourAvailabilityResponse> getAvailability(Long id, String month) {
         // Nạp tour một lần để lấy giá hiệu lực (giá KM nếu có) gắn vào từng ngày khởi hành.
-        Tour tour = tourRepository.findById(id)
+        Tour tour = tourRepository.findActiveById(id)
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
         BigDecimal price = effectivePrice(tour);
         List<Departure> departures;

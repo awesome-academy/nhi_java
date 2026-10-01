@@ -20,3 +20,9 @@ ratelimit:
   auth:
     max-requests: 100000
     window-seconds: 60
+
+# Tắt job nền trong test: nó chạy xen vào giữa test sẽ sửa dữ liệu ngay dưới chân test
+# và sinh lỗi chập chờn rất khó lần. MaintenanceService vẫn gọi thẳng được trong test.
+tasks:
+  maintenance:
+    enabled: false

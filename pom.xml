@@ -29,7 +29,62 @@
 	<properties>
 		<java.version>21</java.version>
 	</properties>
+	<!-- spring-boot-dependencies khai testcontainers.version nhưng không import BOM của
+	     Testcontainers, nên từng module (postgresql, junit-jupiter) vẫn phải lấy version từ đây. -->
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
+		<!-- SOAP: endpoint cho hệ thống đối tác tra cứu chỗ trống. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web-services</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>wsdl4j</groupId>
+			<artifactId>wsdl4j</artifactId>
+		</dependency>
+		<!-- Gửi SOAP request thật vào endpoint trong test, đi qua đúng lớp marshal/unmarshal. -->
+		<dependency>
+			<groupId>org.springframework.ws</groupId>
+			<artifactId>spring-ws-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Hàng đợi cho việc gửi mail xác nhận đặt tour. Tắt được bằng cấu hình, app vẫn chạy
+		     bình thường khi không có broker. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-activemq</artifactId>
+		</dependency>
+		<!-- Broker nhúng (vm://) để test luồng JMS thật mà không cần dựng ActiveMQ bên ngoài. -->
+		<dependency>
+			<groupId>org.apache.activemq</groupId>
+			<artifactId>activemq-broker</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Báo realtime cho khu quản trị khi có đơn mới hoặc đơn đổi trạng thái. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
+
+		<!-- Đọc/ghi file Excel cho chức năng nhập-xuất ở khu quản trị. -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.5.1</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -45,6 +100,16 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc</artifactId>
+		</dependency>
+		<!-- Giao diện quản trị render phía server (khu /admin). API vẫn trả JSON như cũ. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+		<!-- Đăng nhập Facebook (OAuth2 Login). Không cấu hình client-id thì cả cụm không được bật. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-oauth2-client</artifactId>
 		</dependency>
 
 		<dependency>
@@ -97,6 +162,25 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Postgres thật cho các test đụng tới cú pháp riêng của Postgres. H2 chấp nhận nhiều
+		     thứ mà Postgres từ chối (đã có bug lọt qua vì chuyện này), nên phần truy vấn nhạy cảm
+		     với phương ngữ SQL phải chạy trên đúng loại DB của production. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -118,6 +202,29 @@
 
 	<build>
 		<plugins>
+			<!-- Contract-first: lớp payload được SINH RA từ tripgo.xsd, không viết tay.
+			     Nhờ vậy XSD là nguồn sự thật duy nhất — WSDL công bố cho đối tác và lớp Java xử lý
+			     request không thể lệch nhau. -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>jaxb2-maven-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>xjc</id>
+						<goals>
+							<goal>xjc</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<sources>
+						<source>src/main/resources/soap/tripgo.xsd</source>
+					</sources>
+					<outputDirectory>${project.build.directory}/generated-sources/jaxb</outputDirectory>
+					<clearOutputDir>false</clearOutputDir>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

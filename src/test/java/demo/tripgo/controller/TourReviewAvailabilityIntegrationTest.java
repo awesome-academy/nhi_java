@@ -51,6 +51,7 @@ class TourReviewAvailabilityIntegrationTest {
     @Autowired CategoryRepository categories;
     @Autowired DepartureRepository departures;
     @Autowired BookingRepository bookings;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
     @MockitoSpyBean ReviewRepository reviews;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
@@ -60,12 +61,7 @@ class TourReviewAvailabilityIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        bookings.deleteAll();
-        reviews.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         Destination d = new Destination();
         d.setName("Da Nang");
@@ -151,7 +147,6 @@ class TourReviewAvailabilityIntegrationTest {
         saveDeparture(month.plusMonths(1).atDay(1), 5, 0); // tháng khác, không được lấy
 
         mvc.perform(get("/api/v1/tours/" + tour.getId() + "/availability")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/availability")
                 .param("month", month.toString()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(2))
@@ -166,8 +161,7 @@ class TourReviewAvailabilityIntegrationTest {
         saveDeparture(LocalDate.now().plusDays(5), 10, 2);
         saveDeparture(LocalDate.now().plusDays(30), 10, 1);
 
-        mvc.perform(get("/api/v1/tours/" + tour.getId() + "/availability")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/availability"))
+        mvc.perform(get("/api/v1/tours/" + tour.getId() + "/availability"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data.length()").value(2));
     }
@@ -175,7 +169,6 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void availabilityWithBadMonthReturns400() throws Exception {
         mvc.perform(get("/api/v1/tours/" + tour.getId() + "/availability")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/availability")
                 .param("month", "2026-13"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("BAD_REQUEST"));
@@ -183,8 +176,7 @@ class TourReviewAvailabilityIntegrationTest {
 
     @Test
     void availabilityForUnknownTourReturns404() throws Exception {
-        mvc.perform(get("/api/v1/tours/999999/availability")
-                .contextPath("/api/v1").servletPath("/tours/999999/availability"))
+        mvc.perform(get("/api/v1/tours/999999/availability"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.error.code").value("NOT_FOUND"));
     }
@@ -193,8 +185,7 @@ class TourReviewAvailabilityIntegrationTest {
 
     @Test
     void reviewsEmptyReturnsEmptyDataZeroTotalAndZeroAverage() throws Exception {
-        mvc.perform(get("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews"))
+        mvc.perform(get("/api/v1/tours/" + tour.getId() + "/reviews"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isEmpty())
             .andExpect(jsonPath("$.total").value(0))
@@ -204,18 +195,15 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void reviewsReturnPaginatedListWithAverage() throws Exception {
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", tokenFor(saveUserWithBooking()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "good")))
             .andExpect(status().isCreated());
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", tokenFor(saveUserWithBooking()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(2, "meh")))
             .andExpect(status().isCreated());
 
         mvc.perform(get("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .param("page", "1").param("limit", "10"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.total").value(2))
@@ -231,7 +219,6 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void createReviewUpdatesTourRatingAggregate() throws Exception {
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", tokenFor(saveUserWithBooking()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "great")))
             .andExpect(status().isCreated())
@@ -240,8 +227,7 @@ class TourReviewAvailabilityIntegrationTest {
             .andExpect(jsonPath("$.review.user.name").value("Reviewer"));
 
         // Rating denormalized trên tour phải cập nhật để màn chi tiết phản ánh đúng.
-        mvc.perform(get("/api/v1/tours/" + tour.getId())
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId()))
+        mvc.perform(get("/api/v1/tours/" + tour.getId()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.rating").value(5.0))
             .andExpect(jsonPath("$.reviewCount").value(1));
@@ -250,7 +236,6 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void createReviewWithoutAuthReturns401() throws Exception {
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "nice")))
             .andExpect(status().isUnauthorized());
     }
@@ -259,12 +244,10 @@ class TourReviewAvailabilityIntegrationTest {
     void createDuplicateReviewBySameUserReturns409() throws Exception {
         String token = tokenFor(saveUserWithBooking());
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "first")))
             .andExpect(status().isCreated());
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "again")))
             .andExpect(status().isConflict())
@@ -275,7 +258,6 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void createReviewWithoutBookingReturns403() throws Exception {
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "chua dat tour")))
             .andExpect(status().isForbidden())
@@ -287,7 +269,6 @@ class TourReviewAvailabilityIntegrationTest {
     void createReviewWithInvalidRatingReturns422() throws Exception {
         for (int rating : new int[]{0, 6}) {
             mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                    .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                     .header("Authorization", tokenFor(saveUser()))
                     .contentType(MediaType.APPLICATION_JSON).content(reviewBody(rating, "x")))
                 .andExpect(status().isUnprocessableEntity())
@@ -303,13 +284,11 @@ class TourReviewAvailabilityIntegrationTest {
         String token = tokenFor(saveUserWithBooking());
 
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "first")))
             .andExpect(status().isCreated());
 
         mvc.perform(post("/api/v1/tours/" + tour.getId() + "/reviews")
-                .contextPath("/api/v1").servletPath("/tours/" + tour.getId() + "/reviews")
                 .header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(5, "again")))
             .andExpect(status().isConflict())
@@ -319,7 +298,6 @@ class TourReviewAvailabilityIntegrationTest {
     @Test
     void createReviewForUnknownTourReturns404() throws Exception {
         mvc.perform(post("/api/v1/tours/999999/reviews")
-                .contextPath("/api/v1").servletPath("/tours/999999/reviews")
                 .header("Authorization", tokenFor(saveUser()))
                 .contentType(MediaType.APPLICATION_JSON).content(reviewBody(4, "x")))
             .andExpect(status().isNotFound())

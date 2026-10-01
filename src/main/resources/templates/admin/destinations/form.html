@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title th:text="${form.id} != null ? 'Sửa điểm đến · TripGo Admin' : 'Thêm điểm đến · TripGo Admin'">Điểm đến</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title" th:text="${pageHeading}">Thêm điểm đến</h1>
+        <a th:href="@{/admin/destinations}" class="btn-secondary">← Huỷ</a>
+    </div>
+
+    <form th:object="${form}" method="post" enctype="multipart/form-data"
+          th:action="${form.id} != null
+                     ? @{/admin/destinations/{id}(id=${form.id})}
+                     : @{/admin/destinations}"
+          class="form-card" novalidate>
+
+        <div class="form-global-error" th:if="${#fields.hasGlobalErrors()}">
+            <p th:each="err : ${#fields.globalErrors()}" th:text="${err}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="name">Tên điểm đến <span class="required">*</span></label>
+            <input type="text" id="name" th:field="*{name}" maxlength="150">
+            <p class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="slug">Slug</label>
+            <input type="text" id="slug" th:field="*{slug}" maxlength="150"
+                   placeholder="để trống sẽ tự sinh từ tên">
+            <p class="field-hint">
+                Dùng làm tham số lọc công khai <code>?destination=da-nang</code>.
+                Đổi slug sẽ làm hỏng các link cũ.
+            </p>
+            <p class="field-error" th:if="${#fields.hasErrors('slug')}" th:errors="*{slug}">Lỗi</p>
+        </div>
+
+        <div class="form-row">
+            <label for="imageFile">Ảnh đại diện</label>
+            <input type="hidden" th:field="*{image}">
+
+            <div class="thumb-current" th:if="*{image}">
+                <img th:src="*{image}" alt="Ảnh điểm đến hiện tại">
+                <label class="checkbox-inline">
+                    <input type="checkbox" th:field="*{removeImage}"> Gỡ ảnh này
+                </label>
+            </div>
+
+            <input type="file" id="imageFile" th:field="*{imageFile}" accept="image/*">
+            <p class="field-hint">JPG, PNG, WEBP hoặc GIF, tối đa 5 MB.</p>
+            <p class="field-error" th:if="${#fields.hasErrors('image')}" th:errors="*{image}">Lỗi</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Lưu</button>
+            <a th:href="@{/admin/destinations}" class="btn-secondary">Huỷ</a>
+        </div>
+    </form>
+
+</main>
+</body>
+</html>

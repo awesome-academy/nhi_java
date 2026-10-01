@@ -50,6 +50,7 @@ class NPlusOneQueryCountTest {
     @Autowired ReviewService reviewService;
     @Autowired demo.tripgo.repository.ReviewRepository reviews;
     @Autowired EntityManagerFactory emf;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     private User user;
     private Tour detailTour;
@@ -60,12 +61,7 @@ class NPlusOneQueryCountTest {
 
     @BeforeEach
     void setUp() {
-        reviews.deleteAll();
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         // 3 điểm đến khác nhau -> nếu destination không được fetch, mỗi tour sẽ sinh thêm 1 truy vấn.
         Destination[] ds = new Destination[3];

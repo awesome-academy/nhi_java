@@ -50,7 +50,6 @@ class JwtAuthenticationFilterIntegrationTest {
         String token = jwt.generateToken(user);
 
         mvc.perform(get("/api/v1/test/unlisted")
-                .contextPath("/api/v1").servletPath("/test/unlisted")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isOk());
 
@@ -58,7 +57,6 @@ class JwtAuthenticationFilterIntegrationTest {
         users.saveAndFlush(user);
 
         mvc.perform(get("/api/v1/test/unlisted")
-                .contextPath("/api/v1").servletPath("/test/unlisted")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().isUnauthorized())
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -66,7 +64,6 @@ class JwtAuthenticationFilterIntegrationTest {
 
         // The public login handler still runs and reports the account status.
         mvc.perform(post("/api/v1/auth/login")
-                .contextPath("/api/v1").servletPath("/auth/login")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -111,7 +108,6 @@ class JwtAuthenticationFilterIntegrationTest {
         }
 
         mvc.perform(post("/api/v1/auth/login")
-                .contextPath("/api/v1").servletPath("/auth/login")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -121,7 +117,6 @@ class JwtAuthenticationFilterIntegrationTest {
             .andExpect(jsonPath("$.token").isNotEmpty());
 
         mvc.perform(get("/api/v1/test/unlisted")
-                .contextPath("/api/v1").servletPath("/test/unlisted")
                 .header("Authorization", "Bearer " + token))
             .andExpect(status().is(kind.equals("valid") ? 200 : 401));
     }

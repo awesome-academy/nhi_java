@@ -44,3 +44,6 @@ REQUIREMENTS.md
 # nên !docs/api.http sẽ không có tác dụng nếu ignore cả thư mục.
 docs/*
 !docs/api.http
+
+# Ảnh admin tải lên lúc chạy; không thuộc mã nguồn.
+uploads/

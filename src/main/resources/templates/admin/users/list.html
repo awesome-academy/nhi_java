@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Người dùng · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Người dùng <span class="page-count" th:text="'(' + ${total} + ')'">(0)</span></h1>
+    </div>
+
+    <form th:action="@{/admin/users}" method="get" class="search-bar">
+        <input type="hidden" name="role" th:if="${selectedRole}" th:value="${selectedRole.name()}">
+        <input type="search" name="q" th:value="${q}" placeholder="Tìm theo email hoặc tên...">
+        <button type="submit">Tìm</button>
+        <a th:if="${q != null and !q.isEmpty()}" th:href="@{/admin/users(role=${selectedRole?.name()})}"
+           class="search-clear">Xoá lọc</a>
+    </form>
+
+    <nav class="filter-bar">
+        <a th:href="@{/admin/users(q=${q})}" th:classappend="${selectedRole == null} ? 'active'">Tất cả</a>
+        <a th:href="@{/admin/users(q=${q}, role='ADMIN')}"
+           th:classappend="${selectedRole != null and selectedRole.name() == 'ADMIN'} ? 'active'">Admin</a>
+        <a th:href="@{/admin/users(q=${q}, role='USER')}"
+           th:classappend="${selectedRole != null and selectedRole.name() == 'USER'} ? 'active'">Người dùng thường</a>
+    </nav>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>Người dùng</th>
+            <th>Đăng nhập bằng</th>
+            <th>Vai trò</th>
+            <th>Trạng thái</th>
+            <th>Ngày tạo</th>
+            <th>Thao tác</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${users}" th:with="self=${u.email == currentAdmin}">
+            <td>
+                <span th:text="${u.fullName}">Nguyễn A</span>
+                <span class="sub" th:text="${u.email}">a@example.com</span>
+            </td>
+            <td th:text="${u.facebookAccount()} ? 'Facebook' : 'Email / mật khẩu'">Email / mật khẩu</td>
+            <td>
+                <span class="badge"
+                      th:text="${u.admin()} ? 'Admin' : 'Người dùng'"
+                      th:classappend="${u.admin()} ? 'badge-admin' : 'badge-user'">Người dùng</span>
+            </td>
+            <td th:switch="${u.status?.name()}">
+                <span th:case="'ACTIVE'">Hoạt động</span>
+                <span th:case="'INACTIVE'" class="sub">Chưa kích hoạt</span>
+                <span th:case="'BLOCKED'" class="sub">Bị khoá</span>
+                <span th:case="*" class="sub">—</span>
+            </td>
+            <td th:text="${u.createdAt != null} ? ${#temporals.format(u.createdAt, 'dd/MM/yyyy')} : '—'">01/01/2026</td>
+            <td>
+                <!--/* Hai form tĩnh thay vì một form đổi onsubmit theo điều kiện: Thymeleaf 3.1 không
+                       cho biểu thức chuỗi trong thuộc tính sự kiện (chống XSS). */-->
+                <form th:if="${!u.admin()}" th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post"
+                      class="inline-form" onsubmit="return confirm('Cấp quyền admin cho tài khoản này?');">
+                    <input type="hidden" name="newRole" value="ADMIN">
+                    <input type="hidden" name="q" th:value="${q}">
+                    <input type="hidden" name="role" th:value="${selectedRole?.name()}">
+                    <input type="hidden" name="page" th:value="${currentPage}">
+                    <button type="submit" class="btn-link">Cấp quyền admin</button>
+                </form>
+                <!--/* Nút tự hạ quyền bị khoá chỉ để tiện; UserAdminService mới là chỗ chặn thật. */-->
+                <form th:if="${u.admin()}" th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post"
+                      class="inline-form"
+                      onsubmit="return confirm('Chuyển tài khoản này về người dùng thường? Họ sẽ không vào được khu quản trị nữa.');">
+                    <input type="hidden" name="newRole" value="USER">
+                    <input type="hidden" name="q" th:value="${q}">
+                    <input type="hidden" name="role" th:value="${selectedRole?.name()}">
+                    <input type="hidden" name="page" th:value="${currentPage}">
+                    <button type="submit" class="btn-link danger"
+                            th:disabled="${self}"
+                            th:title="${self} ? 'Bạn không thể tự hạ quyền của chính mình' : 'Chuyển về người dùng thường'">Hạ xuống người dùng</button>
+                </form>
+            </td>
+        </tr>
+        <tr th:if="${users.isEmpty()}">
+            <td colspan="6" class="empty-row"
+                th:text="${(q != null and !q.isEmpty()) or selectedRole != null}
+                         ? 'Không tìm thấy người dùng nào khớp bộ lọc'
+                         : 'Chưa có người dùng nào'">Chưa có người dùng nào</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <nav class="pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 1}"
+           th:href="@{/admin/users(q=${q}, role=${selectedRole?.name()}, page=${currentPage - 1})}">‹</a>
+        <span th:each="p : ${#numbers.sequence(1, totalPages)}">
+            <a th:href="@{/admin/users(q=${q}, role=${selectedRole?.name()}, page=${p})}" th:text="${p}"
+               th:classappend="${p == currentPage} ? 'current'">1</a>
+        </span>
+        <a th:if="${currentPage < totalPages}"
+           th:href="@{/admin/users(q=${q}, role=${selectedRole?.name()}, page=${currentPage + 1})}">›</a>
+    </nav>
+
+</main>
+</body>
+</html>

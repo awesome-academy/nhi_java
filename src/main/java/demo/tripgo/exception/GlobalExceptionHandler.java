@@ -22,7 +22,9 @@ import java.util.Map;
 
 // Trả lỗi theo định dạng thống nhất { "error": { "code", "message", "fields"? } }.
 // code = tên HttpStatus (vd "NOT_FOUND"); fields chỉ có ở lỗi validate. Không lộ stack trace/secret.
-@RestControllerAdvice
+// Giới hạn đúng package controller của API: nếu để mặc định, handler này bắt luôn exception của
+// khu quản trị và trả JSON giữa màn hình thay vì trang lỗi HTML.
+@RestControllerAdvice(basePackages = "demo.tripgo.controller")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -1,4 +1,17 @@
 spring:
+  # Hàng đợi gửi mail (xem JmsConfig). Chỉ dùng khi tasks.jms.enabled=true.
+  activemq:
+    broker-url: ${MQ_URL:tcp://localhost:61616}
+    user: ${MQ_USER:admin}
+    password: ${MQ_PASSWORD:admin}
+  jms:
+    # Hàng đợi point-to-point: mỗi message chỉ một người tiêu thụ xử lý.
+    pub-sub-domain: false
+    listener:
+      session:
+        # Listener ném lỗi thì message quay lại hàng đợi để thử lại.
+        transacted: true
+
   application:
     name: tripgo
 
@@ -6,6 +19,12 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/tripgo}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
+
+  # Mặc định của Spring chỉ 1MB; nới ra cho khớp giới hạn 5MB của storage bên dưới.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
 
   jpa:
     hibernate:
@@ -19,8 +38,8 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
-  servlet:
-    context-path: /api/v1
+# Không dùng context-path: tiền tố /api/v1 do ApiPathConfig gắn riêng cho package controller,
+# để khu quản trị /admin/** nằm ngoài tiền tố đó.
 
 jwt:
   secret: ${JWT_SECRET}
@@ -30,6 +49,52 @@ jwt:
 # Origin được phép gọi API (CSV). Mặc định "*" cho dev; prod nên set CORS_ALLOWED_ORIGINS cụ thể.
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+
+# Job dọn dẹp định kỳ và pool luồng chạy nền (xem MaintenanceScheduler, AsyncConfig).
+tasks:
+  # MẶC ĐỊNH TẮT: có ActiveMQ trên classpath mà không có broker thì listener thử kết nối lại liên
+  # tục và làm log đầy lỗi. Tắt thì DirectBookingMailDispatcher làm thay, việc gửi mail không mất.
+  jms:
+    enabled: ${JMS_ENABLED:false}
+  maintenance:
+    enabled: ${TASKS_ENABLED:true}
+    # Đơn chờ xác nhận quá số giờ này sẽ bị tự huỷ và hoàn chỗ.
+    expire-after-hours: ${BOOKING_EXPIRE_HOURS:72}
+    # Bao lâu job kiểm tra một lần (định dạng thời lượng: PT2M = 2 phút, PT30S = 30 giây, PT1H = 1 giờ).
+    # Chỉ đổi NHỊP kiểm tra, không làm đơn quá hạn nhanh hơn — cái đó là expire-after-hours.
+    cancel-expired-delay: ${BOOKING_EXPIRE_CHECK_INTERVAL:PT1H}
+    refresh-rating-delay: ${RATING_REFRESH_INTERVAL:PT6H}
+    # Hoãn lần chạy đầu để không tranh tài nguyên với lúc ứng dụng vừa khởi động.
+    initial-delay: PT2M
+  executor:
+    core-pool-size: 2
+    max-pool-size: 4
+    queue-capacity: 50
+
+# Đăng nhập Facebook. Bỏ trống client-id -> tính năng không bật, app vẫn chạy bình thường.
+# Lấy giá trị ở https://developers.facebook.com/apps -> App settings -> Basic.
+social:
+  login:
+    facebook:
+      client-id: ${FACEBOOK_CLIENT_ID:}
+      client-secret: ${FACEBOOK_CLIENT_SECRET:}
+    # Có giá trị -> callback redirect về frontend kèm ?token=<JWT>.
+    # Bỏ trống -> trả JSON { token, user } ngay tại callback (tiện thử bằng trình duyệt).
+    success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:}
+
+# Ảnh admin tải lên. Lưu ngoài classpath để không mất khi đóng gói lại (xem StorageProperties).
+storage:
+  upload-dir: ${UPLOAD_DIR:./uploads}
+  public-path: /uploads
+  max-file-size-bytes: ${UPLOAD_MAX_BYTES:5242880}
+
+# Tài khoản quản trị đầu tiên, tạo lúc khởi động nếu email chưa tồn tại (xem AdminAccountSeeder).
+# Bỏ trống -> không tạo gì cả.
+admin:
+  seed:
+    email: ${ADMIN_EMAIL:}
+    password: ${ADMIN_PASSWORD:}
+    name: ${ADMIN_NAME:Quản trị viên}
 
 # Rate limit chống brute-force cho POST /auth/** (số request mỗi IP mỗi cửa sổ).
 ratelimit:

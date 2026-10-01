@@ -1,8 +1,11 @@
 package demo.tripgo.entity;
 
+import demo.tripgo.service.SearchText;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.time.LocalDateTime;
 
 // Điểm đến của tour; slug dùng làm khoá lọc thân thiện URL (vd "da-nang").
 @Getter
@@ -27,4 +30,25 @@ public class Destination {
     @Column(length = 500)
     @Setter
     private String image;
+
+    // null = đang hoạt động. Xoá mềm chỉ ghi mốc thời gian, hàng vẫn nằm lại trong bảng để đơn đặt
+    // và đánh giá cũ còn tra được (đó là lý do không dùng DELETE thật).
+    @Column(name = "deleted_at")
+    @Setter
+    private LocalDateTime deletedAt;
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    // Dạng không dấu của tên, dùng cho tìm kiếm (xem Tour.searchText).
+    @Column(name = "search_name", length = 300)
+    private String searchName;
+
+    @PrePersist
+    @PreUpdate
+    void refreshSearchName() {
+        searchName = SearchText.normalize(name);
+    }
+
 }

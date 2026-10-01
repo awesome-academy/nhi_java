@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Dashboard · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+    <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+    </div>
+
+    <div class="stat-grid">
+        <a class="stat-card" th:href="@{/admin/tours}">
+            <span class="stat-label">Tổng tour đang bán</span>
+            <span class="stat-value" th:text="${stats.totalTours}">0</span>
+        </a>
+        <!--/* Bấm vào ô là sang thẳng danh sách đã lọc sẵn - đây là việc admin làm tiếp
+               ngay sau khi nhìn thấy con số. */-->
+        <a class="stat-card" th:href="@{/admin/bookings(status='PENDING')}">
+            <span class="stat-label">Đơn chờ xác nhận</span>
+            <span class="stat-value" th:text="${stats.pendingBookings}">0</span>
+        </a>
+        <a class="stat-card" th:href="@{/admin/bookings}">
+            <span class="stat-label">Đơn tháng này</span>
+            <span class="stat-value" th:text="${stats.bookingsThisMonth}">0</span>
+        </a>
+        <div class="stat-card">
+            <span class="stat-label">Doanh thu tháng</span>
+            <span class="stat-value"
+                  th:text="${#numbers.formatInteger(stats.revenueThisMonth, 0, 'POINT')} + ' đ'">0 đ</span>
+            <span class="stat-note">Không tính đơn đã huỷ</span>
+        </div>
+    </div>
+
+    <section class="chart-grid">
+        <!--/* Rộng hết hàng: 31 cột ngày cần chỗ, chen vào nửa hàng thì nhãn ngày dính vào nhau. */-->
+        <figure class="chart-card chart-card-wide">
+            <figcaption class="chart-caption-row">
+                <div>
+                    <h2 class="chart-title">Doanh thu theo ngày
+                        <!--/* admin-charts.js đổi chữ + màu theo trạng thái kết nối WebSocket. */-->
+                        <span class="live-badge" id="dailyLive">● Đang kết nối…</span>
+                    </h2>
+                    <p class="chart-note">Theo ngày đặt đơn · không tính đơn đã huỷ</p>
+                </div>
+                <div class="chart-controls">
+                    <label for="dailyMonth">Tháng</label>
+                    <!--/* max = tháng hiện tại: không chọn được tháng tương lai. Server cũng chặn lại. */-->
+                    <input type="month" id="dailyMonth" th:value="${currentMonth}" th:max="${currentMonth}">
+                </div>
+            </figcaption>
+            <p class="chart-total" id="dailyTotal" aria-live="polite"></p>
+            <p class="chart-note" id="dailyUpdatedAt"></p>
+            <div class="chart-box"><canvas id="dailyRevenue"></canvas></div>
+            <p class="chart-empty" id="dailyError" hidden>Không tải được dữ liệu biểu đồ</p>
+            <details class="chart-table">
+                <summary>Xem dạng bảng</summary>
+                <table class="data-table" id="dailyRevenueTable">
+                    <thead><tr><th>Ngày</th><th class="num">Số đơn</th><th class="num">Doanh thu</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </details>
+        </figure>
+    </section>
+
+    <!--/* Script PHẢI nằm trong <main>: layout chỉ nhúng <title> và <main> của trang con
+           (page(~{::title}, ~{::main})), thẻ nào đặt sau </main> sẽ bị bỏ khi render. */-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/admin-charts.js}"></script>
+</main>
+</body>
+</html>

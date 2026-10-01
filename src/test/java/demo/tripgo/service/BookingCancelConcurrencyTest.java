@@ -43,6 +43,7 @@ class BookingCancelConcurrencyTest {
     @Autowired CategoryRepository categories;
     @Autowired UserRepository users;
     @Autowired PasswordEncoder encoder;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     // Huỷ đồng thời 2 đơn trên cùng departure không được để lost update khi hoàn chỗ.
     @Test
@@ -56,11 +57,7 @@ class BookingCancelConcurrencyTest {
     }
 
     private int runOneConcurrentCancel() throws Exception {
-        bookings.deleteAll();
-        departures.deleteAll();
-        tours.deleteAll();
-        destinations.deleteAll();
-        users.deleteAll();
+        cleaner.clean();
 
         Destination d = new Destination();
         d.setName("Da Nang");

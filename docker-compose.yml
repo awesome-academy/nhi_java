@@ -16,6 +16,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # Hàng đợi gửi mail. Chỉ cần khi JMS_ENABLED=true; để mặc định thì api không đụng tới nó.
+  mq:
+    image: apache/activemq-classic:6.2.0
+    environment:
+      ACTIVEMQ_CONNECTION_USER: ${MQ_USER:-admin}
+      ACTIVEMQ_CONNECTION_PASSWORD: ${MQ_PASSWORD:-admin}
+    ports:
+      - "${MQ_PORT:-61616}:61616"
+      - "${MQ_CONSOLE_PORT:-8161}:8161"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u $${ACTIVEMQ_CONNECTION_USER}:$${ACTIVEMQ_CONNECTION_PASSWORD} http://localhost:8161/admin/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   api:
     build: .
     depends_on:
@@ -31,6 +46,15 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      # Bỏ trống -> đăng nhập Facebook không được bật (xem .env.example).
+      FACEBOOK_CLIENT_ID: ${FACEBOOK_CLIENT_ID:-}
+      FACEBOOK_CLIENT_SECRET: ${FACEBOOK_CLIENT_SECRET:-}
+      OAUTH2_SUCCESS_REDIRECT_URI: ${OAUTH2_SUCCESS_REDIRECT_URI:-}
+      # Bật hàng đợi gửi mail. Để false thì api gửi thẳng trên pool nền, không cần broker.
+      JMS_ENABLED: ${JMS_ENABLED:-false}
+      MQ_URL: tcp://mq:61616
+      MQ_USER: ${MQ_USER:-admin}
+      MQ_PASSWORD: ${MQ_PASSWORD:-admin}
       RATE_LIMIT_AUTH_MAX: ${RATE_LIMIT_AUTH_MAX:-20}
       RATE_LIMIT_AUTH_WINDOW: ${RATE_LIMIT_AUTH_WINDOW:-60}
     ports:

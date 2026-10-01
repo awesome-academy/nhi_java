@@ -28,11 +28,11 @@ class DestinationControllerIntegrationTest {
     @Autowired TourRepository tours;
     @Autowired DestinationRepository destinations;
     @Autowired CategoryRepository categories;
+    @Autowired demo.tripgo.TestDataCleaner cleaner;
 
     @BeforeEach
     void setUp() {
-        tours.deleteAll();
-        destinations.deleteAll();
+        cleaner.clean();
     }
 
     private Destination saveDestination(String name, String slug) {
@@ -63,7 +63,7 @@ class DestinationControllerIntegrationTest {
         saveTour("DN 2", daNang);
         saveTour("HN 1", haNoi);
 
-        mvc.perform(get("/api/v1/destinations").contextPath("/api/v1").servletPath("/destinations"))
+        mvc.perform(get("/api/v1/destinations"))
             .andExpect(status().isOk())
             // Object envelope, không phải array trần.
             .andExpect(jsonPath("$.data").isArray())
@@ -79,7 +79,7 @@ class DestinationControllerIntegrationTest {
 
     @Test
     void listWithNoDestinationsReturnsEmptyData() throws Exception {
-        mvc.perform(get("/api/v1/destinations").contextPath("/api/v1").servletPath("/destinations"))
+        mvc.perform(get("/api/v1/destinations"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.data").isEmpty());
     }
@@ -88,7 +88,7 @@ class DestinationControllerIntegrationTest {
     void listIsPublicAndDoesNotRequireAuth() throws Exception {
         saveDestination("Da Nang", "da-nang");
         // Không gửi token vẫn 200 (không phải 401).
-        mvc.perform(get("/api/v1/destinations").contextPath("/api/v1").servletPath("/destinations"))
+        mvc.perform(get("/api/v1/destinations"))
             .andExpect(status().isOk());
     }
 

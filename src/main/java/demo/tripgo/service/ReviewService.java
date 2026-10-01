@@ -46,7 +46,7 @@ public class ReviewService {
 
     // Đánh giá phân trang (mới nhất trước) + điểm trung bình của tour (lấy từ rating_avg đã denormalized).
     public ReviewPageResponse getReviews(Long tourId, int page, int limit) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findActiveById(tourId)
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
         Pageable pageable = PageRequest.of(
             page - 1, limit, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id")));
@@ -57,7 +57,7 @@ public class ReviewService {
 
     @Transactional
     public CreateReviewResponse createReview(Long tourId, User user, CreateReviewRequest request) {
-        Tour tour = tourRepository.findById(tourId)
+        Tour tour = tourRepository.findActiveById(tourId)
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
         // Theo user story F8 ("là người dùng ĐÃ ĐẶT TOUR"): chỉ ai từng đặt tour này mới được đánh giá.
         // Đơn đã huỷ không tính -> chặn việc đặt rồi huỷ ngay chỉ để lấy quyền đánh giá.

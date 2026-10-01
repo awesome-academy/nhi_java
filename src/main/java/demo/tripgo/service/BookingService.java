@@ -10,6 +10,7 @@ import demo.tripgo.entity.ContactInfo;
 import demo.tripgo.entity.Departure;
 import demo.tripgo.entity.Tour;
 import demo.tripgo.entity.User;
+import demo.tripgo.event.BookingEvent;
 import demo.tripgo.exception.BookingAlreadyCancelledException;
 import demo.tripgo.exception.InvalidBookingRequestException;
 import demo.tripgo.exception.ResourceNotFoundException;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,7 @@ public class BookingService {
     private final TourRepository tourRepository;
     private final DepartureRepository departureRepository;
     private final BookingMapper bookingMapper;
+    private final ApplicationEventPublisher events;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -47,17 +50,19 @@ public class BookingService {
         BookingRepository bookingRepository,
         TourRepository tourRepository,
         DepartureRepository departureRepository,
-        BookingMapper bookingMapper
+        BookingMapper bookingMapper,
+        ApplicationEventPublisher events
     ) {
         this.bookingRepository = bookingRepository;
         this.tourRepository = tourRepository;
         this.departureRepository = departureRepository;
         this.bookingMapper = bookingMapper;
+        this.events = events;
     }
 
     @Transactional
     public BookingResponse createBooking(User user, CreateBookingRequest request) {
-        Tour tour = tourRepository.findById(request.tourId())
+        Tour tour = tourRepository.findActiveById(request.tourId())
             .orElseThrow(() -> new ResourceNotFoundException("tour"));
 
         // Khoá hàng khởi hành để kiểm tra & trừ chỗ an toàn với request đồng thời.
@@ -87,6 +92,10 @@ public class BookingService {
 
         // Sinh mã đơn từ id (đảm bảo duy nhất) sau khi đã có id.
         saved.setCode(generateCode(saved.getId()));
+
+        // Sự kiện chỉ được gửi đi sau khi transaction commit (xem BookingNotifier), nên phát ở
+        // đây là an toàn: nếu có lỗi phía sau làm rollback thì không ai nhận được thông báo.
+        events.publishEvent(BookingEvent.of(BookingEvent.Kind.CREATED, saved));
         return bookingMapper.toResponse(saved);
     }
 
@@ -108,6 +117,22 @@ public class BookingService {
     public BookingResponse cancelBooking(User user, Long id) {
         Booking booking = bookingRepository.findByIdAndUserId(id, user.getId())
             .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
+        cancelAndReleaseSeats(booking);
+        return bookingMapper.toResponse(booking);
+    }
+
+    // Huỷ đơn không ràng buộc user: dùng cho admin bấm huỷ và cho job tự huỷ đơn quá hạn.
+    // Vẫn đi qua cùng một hàm huỷ để phần hoàn chỗ (có khoá) chỉ tồn tại ở MỘT nơi —
+    // chép logic này sang service khác là mời gọi bug bán vượt số chỗ.
+    @Transactional
+    public Booking cancelById(Long id) {
+        Booking booking = bookingRepository.findWithDetailsById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("đơn đặt tour"));
+        cancelAndReleaseSeats(booking);
+        return booking;
+    }
+
+    private void cancelAndReleaseSeats(Booking booking) {
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new BookingAlreadyCancelledException(booking.getCode());
         }
@@ -119,7 +144,7 @@ public class BookingService {
         Departure departure = booking.getDeparture();
         entityManager.refresh(departure, LockModeType.PESSIMISTIC_WRITE);
         departure.setBookedSeats(departure.getBookedSeats() - (booking.getAdults() + booking.getChildren()));
-        return bookingMapper.toResponse(booking);
+        events.publishEvent(BookingEvent.of(BookingEvent.Kind.CANCELLED, booking));
     }
 
     // Giá mỗi khách = giá KM nếu có, ngược lại giá gốc; tổng = giá * tổng số khách.
