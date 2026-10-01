@@ -1,37 +1,12 @@
 // Nhận thông báo realtime về đơn đặt và hiện một thẻ nhỏ ở góc màn hình.
-//
-// Kết nối tới /admin/ws — endpoint nằm trong khu quản trị nên chỉ phiên admin bắt tay được.
-// Không dùng SockJS: WebSocket thuần chỉ cần một GET Upgrade nên không vướng CSRF.
+// Kết nối STOMP dùng chung nằm ở admin-realtime.js.
 (function () {
-    if (typeof StompJs === 'undefined') {
-        return;
-    }
-
     const HOST = document.getElementById('notification-host');
-    if (!HOST) {
+    if (!HOST || !window.tripgoRealtime) {
         return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const client = new StompJs.Client({
-        brokerURL: protocol + '//' + window.location.host + '/admin/ws',
-        // Tự kết nối lại khi mạng chập chờn hoặc server khởi động lại.
-        reconnectDelay: 5000,
-        heartbeatIncoming: 10000,
-        heartbeatOutgoing: 10000
-    });
-
-    client.onConnect = function () {
-        client.subscribe('/topic/bookings', function (frame) {
-            try {
-                show(JSON.parse(frame.body));
-            } catch (error) {
-                // Gói tin hỏng không được làm đứt luồng nhận các gói sau.
-            }
-        });
-    };
-
-    client.activate();
+    window.tripgoRealtime.subscribe('/topic/bookings', show);
 
     function show(event) {
         const card = document.createElement('div');

@@ -82,19 +82,51 @@ class AdminTourListIntegrationTest {
             .andExpect(content().string(containsString("+ Thêm tour")));
     }
 
-    // Cột ảnh: có thumbnail thì render <img>, không có thì hiện dấu gạch chứ không để ô trống.
+    // Bảng chỉ còn 6 cột; ID và ảnh đã bỏ (ảnh vẫn còn ở form sửa tour).
     @Test
     @WithMockUser(roles = "ADMIN")
-    void showsThumbnailColumn() throws Exception {
+    void tableShowsOnlyAgreedColumns() throws Exception {
         Tour withImage = saveTour("Tour có ảnh");
         withImage.setThumbnailUrl("/uploads/dulich.jpg");
         tours.saveAndFlush(withImage);
-        saveTour("Tour không ảnh");
 
         mvc.perform(get("/admin/tours"))
-            .andExpect(status().isOk())
-            .andExpect(content().string(containsString("<img class=\"row-thumb\"")))
-            .andExpect(content().string(containsString("/uploads/dulich.jpg")));
+            .andExpect(content().string(containsString("<th>Tên tour</th>")))
+            .andExpect(content().string(containsString("<th class=\"num\">Thời lượng</th>")))
+            .andExpect(content().string(containsString("<th class=\"num\">Đánh giá</th>")))
+            .andExpect(content().string(not(containsString("<th>ID</th>"))))
+            .andExpect(content().string(not(containsString("<th>Ảnh</th>"))))
+            .andExpect(content().string(not(containsString("/uploads/dulich.jpg"))))
+            .andExpect(content().string(containsString("3 ngày")));
+    }
+
+    // Có khuyến mãi: giá khuyến mãi đứng trên, giá gốc gạch ngang bên dưới.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void showsDiscountPriceWithOriginalStruckThrough() throws Exception {
+        Tour tour = saveTour("Tour khuyến mãi");
+        tour.setDiscountPrice(new BigDecimal("3990000"));
+        tours.saveAndFlush(tour);
+
+        mvc.perform(get("/admin/tours"))
+            .andExpect(content().string(containsString("<span>3.990.000</span>")))
+            .andExpect(content().string(containsString("<span class=\"sub price-old\">")));
+    }
+
+    // Điểm làm tròn 1 chữ số; tour chưa ai đánh giá hiện "—" chứ không phải 0.0.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void showsRatingOrDashWhenNoReviews() throws Exception {
+        Tour rated = saveTour("Tour có đánh giá");
+        rated.setRatingAvg(4.5);
+        rated.setReviewCount(12);
+        tours.saveAndFlush(rated);
+        saveTour("Tour chưa đánh giá");
+
+        mvc.perform(get("/admin/tours"))
+            .andExpect(content().string(containsString(">4.5</td>")))
+            .andExpect(content().string(containsString(">—</td>")))
+            .andExpect(content().string(not(containsString(">0.0</td>"))));
     }
 
     @Test

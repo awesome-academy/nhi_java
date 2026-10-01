@@ -1,5 +1,10 @@
-// Biểu đồ "Doanh thu theo ngày" trên dashboard. Dữ liệu lấy từ /admin/reports/revenue-daily và
-// tải lại mỗi lần đổi tháng.
+// Biểu đồ "Doanh thu theo ngày" trên dashboard, cập nhật REALTIME.
+//
+// Dữ liệu tổng hợp lấy từ GET /admin/reports/chart-data?month=yyyy-MM. Tải lại khi:
+//   - đổi tháng ở ô chọn;
+//   - server báo có dữ liệu mới qua STOMP topic /topic/chart-updates (đơn mới / xác nhận / huỷ,
+//     hoặc job huỷ đơn quá hạn chạy xong) — xem ChartUpdatePublisher.
+// Tín hiệu không mang số liệu: nhận được thì gọi lại API cho đúng tháng đang xem.
 //
 // Chỉ có MỘT chuỗi số liệu nên dùng một màu duy nhất: tô mỗi cột một màu khác khi
 // chúng cùng ý nghĩa là gán màu theo thứ hạng chứ không theo dữ liệu, và làm người đọc tưởng
@@ -59,11 +64,47 @@
     });
     loadDaily(monthInput.value);
 
-    function loadDaily(month) {
+    // ---- Realtime ----
+
+    // Gộp tín hiệu dồn dập: job huỷ 20 đơn liền phát 20 tín hiệu, chỉ cần tải lại MỘT lần.
+    const REALTIME_DEBOUNCE_MS = 500;
+    let pendingRefresh = null;
+    let lastReason = null;
+
+    function onChartUpdate(update) {
+        lastReason = update && update.message ? update.message : null;
+        clearTimeout(pendingRefresh);
+        pendingRefresh = setTimeout(() => {
+            // Tải lại đúng tháng admin ĐANG xem, không kéo họ về tháng hiện tại.
+            loadDaily(monthInput.value, lastReason);
+        }, REALTIME_DEBOUNCE_MS);
+    }
+
+    function showLive(connected) {
+        const badge = document.getElementById('dailyLive');
+        if (!badge) {
+            return;
+        }
+        badge.classList.toggle('is-live', connected);
+        badge.textContent = connected ? '● Realtime' : '● Mất kết nối, đang thử lại…';
+    }
+
+    // admin-charts.js nằm trong <main> nên chạy TRƯỚC admin-realtime.js (cuối layout). Đợi
+    // DOMContentLoaded — lúc đó mọi script đồng bộ trên trang đã chạy xong, tripgoRealtime đã có.
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!window.tripgoRealtime) {
+            return;
+        }
+        window.tripgoRealtime.subscribe('/topic/chart-updates', onChartUpdate);
+        window.tripgoRealtime.onStatus(showLive);
+    });
+
+    // reason: câu mô tả khi tải lại vì có tín hiệu realtime (null nếu do người dùng đổi tháng).
+    function loadDaily(month, reason) {
         // Đổi tháng liên tục thì các response có thể về lệch thứ tự: chỉ vẽ kết quả của lần chọn
         // CUỐI, response trễ của lần trước bị bỏ qua.
         const requestId = ++latestDailyRequest;
-        fetch('/admin/reports/revenue-daily?month=' + encodeURIComponent(month || ''),
+        fetch('/admin/reports/chart-data?month=' + encodeURIComponent(month || ''),
             { headers: { Accept: 'application/json' } })
             .then((response) => {
                 if (!response.ok) {
@@ -73,7 +114,7 @@
             })
             .then((data) => {
                 if (requestId === latestDailyRequest) {
-                    renderDaily(data);
+                    renderDaily(data, reason);
                 }
             })
             .catch(() => {
@@ -85,7 +126,7 @@
             });
     }
 
-    function renderDaily(data) {
+    function renderDaily(data, reason) {
         // Server đổi tháng tương lai / sai định dạng về tháng hiện tại -> ô chọn hiện đúng tháng đó.
         monthInput.value = data.month;
         monthInput.max = data.maxMonth;
@@ -96,6 +137,13 @@
             'Tổng tháng ' + monthLabel(data.month) + ': ' + formatMoney(data.totalRevenue)
             + ' · ' + data.totalBookings + ' đơn';
         fillTable('dailyRevenueTable', data.days, (d) => [d.label, d.bookingCount, formatMoney(d.revenue)]);
+
+        const updatedAt = document.getElementById('dailyUpdatedAt');
+        if (updatedAt) {
+            const time = new Date().toLocaleTimeString('vi-VN');
+            // textContent: message có mã đơn / tên tour do người dùng nhập.
+            updatedAt.textContent = 'Cập nhật lúc ' + time + (reason ? ' · ' + reason : '');
+        }
 
         const labels = data.days.map((d) => String(d.day));
         const values = data.days.map((d) => d.revenue);

@@ -42,7 +42,7 @@ public class MaintenanceService {
     //
     // Huỷ TỪNG đơn qua BookingService.cancelById để dùng đúng phần hoàn chỗ có khoá bi quan.
     // Gom cả mẻ vào một transaction thì một đơn hỏng sẽ kéo đổ cả mẻ.
-    public int cancelExpiredPendingBookings(int expireAfterHours) {
+    public ExpiredCancellation cancelExpiredPendingBookings(int expireAfterHours) {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(expireAfterHours);
         List<Booking> expired =
             bookingRepository.findByStatusAndCreatedAtBefore(BookingStatus.PENDING, cutoff);
@@ -62,7 +62,12 @@ public class MaintenanceService {
         // thay vì im lặng không phân biệt được "không có đơn quá hạn" với "job đã chết".
         log.info("Kiểm tra đơn chờ xác nhận quá {} giờ: tìm thấy {}, đã huỷ {}",
             expireAfterHours, expired.size(), cancelled);
-        return cancelled;
+        return new ExpiredCancellation(expired.size(), cancelled);
+    }
+
+    // found > cancelled nghĩa là có đơn huỷ lỗi (đã ghi log WARN từng đơn), màn hình Job nền
+    // hiện ra để admin biết mà xem log.
+    public record ExpiredCancellation(int found, int cancelled) {
     }
 
     // rating_avg và review_count được denormalize để lọc/sắp xếp chạy thẳng ở DB. Chúng được cập

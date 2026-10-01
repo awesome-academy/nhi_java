@@ -38,7 +38,10 @@
         <figure class="chart-card chart-card-wide">
             <figcaption class="chart-caption-row">
                 <div>
-                    <h2 class="chart-title">Doanh thu theo ngày</h2>
+                    <h2 class="chart-title">Doanh thu theo ngày
+                        <!--/* admin-charts.js đổi chữ + màu theo trạng thái kết nối WebSocket. */-->
+                        <span class="live-badge" id="dailyLive">● Đang kết nối…</span>
+                    </h2>
                     <p class="chart-note">Theo ngày đặt đơn · không tính đơn đã huỷ</p>
                 </div>
                 <div class="chart-controls">
@@ -48,6 +51,7 @@
                 </div>
             </figcaption>
             <p class="chart-total" id="dailyTotal" aria-live="polite"></p>
+            <p class="chart-note" id="dailyUpdatedAt"></p>
             <div class="chart-box"><canvas id="dailyRevenue"></canvas></div>
             <p class="chart-empty" id="dailyError" hidden>Không tải được dữ liệu biểu đồ</p>
             <details class="chart-table">

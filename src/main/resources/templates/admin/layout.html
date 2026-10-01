@@ -26,6 +26,7 @@
             <a th:href="@{/admin/bookings}" th:classappend="${activeMenu == 'bookings'} ? 'active'">Đơn đặt</a>
             <a th:href="@{/admin/destinations}" th:classappend="${activeMenu == 'destinations'} ? 'active'">Điểm đến</a>
             <a th:href="@{/admin/users}" th:classappend="${activeMenu == 'users'} ? 'active'">Người dùng</a>
+            <a th:href="@{/admin/jobs}" th:classappend="${activeMenu == 'jobs'} ? 'active'">Job nền</a>
             <hr>
             <!--/* Đăng xuất phải là POST: GET sẽ bị CSRF chặn, và cũng để tránh bị đăng xuất
                    ngoài ý muốn qua một thẻ <img> trỏ tới URL đó. */-->
@@ -58,6 +59,8 @@
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+<!--/* admin-realtime.js mở kết nối STOMP dùng chung; các script sau chỉ đăng ký topic mình cần. */-->
+<script th:src="@{/js/admin-realtime.js}"></script>
 <script th:src="@{/js/admin-notifications.js}"></script>
 </body>
 </html>

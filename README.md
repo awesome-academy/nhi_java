@@ -195,7 +195,13 @@ bi quan) chỉ tồn tại ở một nơi.
 
 Một biểu đồ (Chart.js): doanh thu theo từng ngày đặt đơn của một tháng, chọn tháng bằng ô chọn
 (không chọn được tháng tương lai), không tính đơn đã huỷ.
-Dữ liệu lấy từ `GET /admin/reports/revenue-daily?month=yyyy-MM`.
+Dữ liệu tổng hợp lấy từ `GET /admin/reports/chart-data?month=yyyy-MM`.
+
+Biểu đồ cập nhật **realtime**: khi có đơn mới / xác nhận / huỷ, hoặc job huỷ đơn quá hạn chạy xong
+và có huỷ đơn, server gửi tín hiệu STOMP tới `/topic/chart-updates` (`ChartUpdatePublisher`).
+Trình duyệt nhận tín hiệu rồi gọi lại `/chart-data` cho đúng tháng đang xem và cập nhật Chart.js.
+Tín hiệu không mang số liệu vì mỗi admin có thể đang xem một tháng khác nhau. Dùng WebSocket thuần,
+không SockJS (xem `WebSocketConfig`).
 
 Biểu đồ chỉ có **một** chuỗi số liệu nên dùng **một màu** — tô mỗi cột một màu khi chúng cùng
 ý nghĩa là gán màu theo thứ hạng chứ không theo dữ liệu. Màu khai trong `admin.css` dưới dạng

@@ -94,7 +94,7 @@ class MaintenanceServiceIntegrationTest {
         departure.setBookedSeats(9);
         departures.saveAndFlush(departure);
 
-        assertThat(maintenance.cancelExpiredPendingBookings(72)).isEqualTo(1);
+        assertThat(maintenance.cancelExpiredPendingBookings(72).cancelled()).isEqualTo(1);
 
         assertThat(status(old)).isEqualTo(BookingStatus.CANCELLED);
         // Đơn mới và đơn đã xác nhận không được đụng tới.
@@ -110,7 +110,7 @@ class MaintenanceServiceIntegrationTest {
     void doesNothingWhenNoBookingExpired() {
         saveBooking(BookingStatus.PENDING, 2, LocalDateTime.now().minusHours(1));
 
-        assertThat(maintenance.cancelExpiredPendingBookings(72)).isZero();
+        assertThat(maintenance.cancelExpiredPendingBookings(72).cancelled()).isZero();
     }
 
     // Chạy lại lần hai không được trừ chỗ thêm lần nữa.
@@ -120,8 +120,8 @@ class MaintenanceServiceIntegrationTest {
         departure.setBookedSeats(3);
         departures.saveAndFlush(departure);
 
-        assertThat(maintenance.cancelExpiredPendingBookings(72)).isEqualTo(1);
-        assertThat(maintenance.cancelExpiredPendingBookings(72)).isZero();
+        assertThat(maintenance.cancelExpiredPendingBookings(72).cancelled()).isEqualTo(1);
+        assertThat(maintenance.cancelExpiredPendingBookings(72).cancelled()).isZero();
         assertThat(departures.findById(departure.getId()).orElseThrow().getBookedSeats()).isZero();
     }
 

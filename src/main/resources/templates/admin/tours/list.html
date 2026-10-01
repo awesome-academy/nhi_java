@@ -26,27 +26,30 @@
     <table class="data-table">
         <thead>
         <tr>
-            <th>ID</th>
-            <th>Ảnh</th>
             <th>Tên tour</th>
             <th>Điểm đến</th>
             <th class="num">Giá</th>
-            <th class="num">Số ngày</th>
+            <th class="num">Thời lượng</th>
+            <th class="num">Đánh giá</th>
             <th>Thao tác</th>
         </tr>
         </thead>
         <tbody>
         <tr th:each="tour : ${tours}">
-            <td th:text="${tour.id}">1</td>
-            <td>
-                <img class="row-thumb" th:if="${tour.thumbnail}"
-                     th:src="${tour.thumbnail}" th:alt="${tour.title}">
-                <span class="sub" th:unless="${tour.thumbnail}">—</span>
-            </td>
             <td th:text="${tour.title}">Tên tour</td>
             <td th:text="${tour.destination}">Điểm đến</td>
-            <td class="num" th:text="${#numbers.formatInteger(tour.price, 0, 'POINT')}">0</td>
-            <td class="num" th:text="${tour.durationDays}">0</td>
+            <!--/* Có khuyến mãi thì giá khách thực trả đứng trên, giá gốc gạch ngang bên dưới. */-->
+            <td class="num" th:if="${tour.discountPrice != null}">
+                <span th:text="${#numbers.formatInteger(tour.discountPrice, 0, 'POINT')}">0</span>
+                <span class="sub price-old" th:text="${#numbers.formatInteger(tour.price, 0, 'POINT')}">0</span>
+            </td>
+            <td class="num" th:unless="${tour.discountPrice != null}"
+                th:text="${#numbers.formatInteger(tour.price, 0, 'POINT')}">0</td>
+            <td class="num" th:text="${tour.durationDays} + ' ngày'">3 ngày</td>
+            <!--/* Chưa có lượt nào thì rating = 0; hiện "—" để khỏi đọc nhầm thành bị chấm 0 điểm. */-->
+            <td class="num" th:text="${tour.reviewCount > 0}
+                                     ? ${#numbers.formatDecimal(tour.rating, 1, 1, 'POINT')}
+                                     : '—'">4.5</td>
             <td>
                 <a th:href="@{/admin/tours/{id}/edit(id=${tour.id})}" class="btn-link">Sửa</a>
                 <!--/* Xoá phải là POST + CSRF; xác nhận trước khi gửi để tránh bấm nhầm. */-->
@@ -58,7 +61,7 @@
             </td>
         </tr>
         <tr th:if="${tours.isEmpty()}">
-            <td colspan="7" class="empty-row"
+            <td colspan="6" class="empty-row"
                 th:text="${q != null and !q.isEmpty()}
                          ? 'Không tìm thấy tour nào khớp từ khoá'
                          : 'Chưa có tour nào'">Chưa có tour nào</td>

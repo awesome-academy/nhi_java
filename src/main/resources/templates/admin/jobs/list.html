@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: page(~{::title}, ~{::main})}" lang="vi">
+<head>
+    <title>Job nền · TripGo Admin</title>
+</head>
+<body>
+<main class="admin-content">
+
+    <div class="page-header">
+        <h1 class="page-title">Job nền</h1>
+        <a th:href="@{/admin/jobs}" class="btn-secondary"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Tải lại</a>
+    </div>
+
+    <!--/* Lịch tắt thì nói rõ, kẻo admin tưởng job bị treo vì mãi không thấy chạy. */-->
+    <p class="flash flash-error" th:unless="${scheduleEnabled}">
+        Lịch chạy tự động đang tắt (TASKS_ENABLED=false). Vẫn bấm "Chạy ngay" được.
+    </p>
+
+    <section class="job-grid">
+        <article class="job-card" th:each="v : ${jobs}" th:with="s=${v.state}">
+            <header class="job-card-head">
+                <div>
+                    <h2 class="job-title" th:text="${v.job.title}">Huỷ đơn quá hạn</h2>
+                    <p class="job-desc" th:text="${v.description}">Mô tả</p>
+                </div>
+                <span class="badge"
+                      th:text="${s.status.label}"
+                      th:classappend="'badge-job-' + ${s.status.name().toLowerCase()}">Thành công</span>
+            </header>
+
+            <dl class="job-facts">
+                <dt>Nhịp chạy</dt>
+                <dd th:text="${v.scheduleEnabled} ? ${v.interval} : 'Đang tắt'">mỗi 1 giờ</dd>
+
+                <dt>Lần chạy cuối</dt>
+                <dd th:if="${s.lastStartedAt == null}">Chưa chạy kể từ khi khởi động</dd>
+                <dd th:if="${s.lastStartedAt != null}">
+                    <span th:text="${#temporals.format(s.lastStartedAt, 'HH:mm:ss dd/MM/yyyy')}">14:05:12 01/10/2026</span>
+                    <span class="sub" th:if="${!s.running}"
+                          th:text="'(' + ${s.trigger.label} + ', mất ' + ${s.durationMillis} + ' ms, luồng ' + ${s.threadName} + ')'">(Theo lịch, mất 35 ms, luồng tripgo-task-1)</span>
+                    <span class="sub" th:if="${s.running}"
+                          th:text="'(' + ${s.trigger.label} + ', đang chạy trên luồng ' + ${s.threadName} + ')'">(đang chạy)</span>
+                </dd>
+
+                <dt>Kết quả</dt>
+                <dd th:if="${s.error != null}" class="job-error" th:text="${s.error}">Lỗi</dd>
+                <dd th:if="${s.error == null}" th:text="${s.summary} ?: '—'">Tìm thấy 3 đơn, đã huỷ 3</dd>
+
+                <dt>Lần chạy tiếp</dt>
+                <dd th:if="${v.nextRunAt != null}" th:text="'khoảng ' + ${#temporals.format(v.nextRunAt, 'HH:mm:ss dd/MM/yyyy')}">khoảng 15:05</dd>
+                <dd th:if="${v.nextRunAt == null}" th:text="${!v.scheduleEnabled} ? 'Không có (lịch đang tắt)' : 'Sau khi lần này chạy xong'">—</dd>
+
+                <dt>Số lần đã chạy</dt>
+                <dd th:text="${s.runCount}">0</dd>
+            </dl>
+
+            <!--/* POST + CSRF như mọi thao tác thay đổi dữ liệu; job chạy trên luồng nền nên trang
+                   trả về ngay, kết quả xem sau khi tải lại. */-->
+            <form th:action="@{/admin/jobs/{slug}/run(slug=${v.job.slug})}" method="post" class="job-actions">
+                <button type="submit" class="btn-primary" th:disabled="${s.running}">
+                    <i class="bi bi-play-fill" aria-hidden="true"></i> Chạy ngay
+                </button>
+            </form>
+        </article>
+    </section>
+
+</main>
+</body>
+</html>

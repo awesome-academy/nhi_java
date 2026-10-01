@@ -21,6 +21,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     public static final String ENDPOINT = "/admin/ws";
     public static final String TOPIC_BOOKINGS = "/topic/bookings";
+    // Tín hiệu cho biểu đồ dashboard: có dữ liệu mới thì tải lại (xem ChartUpdatePublisher).
+    public static final String TOPIC_CHART_UPDATES = "/topic/chart-updates";
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {

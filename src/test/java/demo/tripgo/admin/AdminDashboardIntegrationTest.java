@@ -138,7 +138,7 @@ class AdminDashboardIntegrationTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void dailyRevenueReturnsEveryDayOfMonth() throws Exception {
-        mvc.perform(get("/admin/reports/revenue-daily").param("month", "2024-02"))
+        mvc.perform(get("/admin/reports/chart-data").param("month", "2024-02"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.month").value("2024-02"))
             .andExpect(jsonPath("$.days.length()").value(29))
@@ -163,7 +163,7 @@ class AdminDashboardIntegrationTest {
         placeAt(BookingStatus.CONFIRMED, "8000000", month.plusMonths(1).atDay(1).atStartOfDay());
 
         int lastDay = month.lengthOfMonth() - 1;
-        mvc.perform(get("/admin/reports/revenue-daily").param("month", month.toString()))
+        mvc.perform(get("/admin/reports/chart-data").param("month", month.toString()))
             .andExpect(jsonPath("$.days.length()").value(month.lengthOfMonth()))
             .andExpect(jsonPath("$.days[4].revenue").value(5000000))
             .andExpect(jsonPath("$.days[4].bookingCount").value(2))
@@ -181,12 +181,12 @@ class AdminDashboardIntegrationTest {
         String current = YearMonth.now().toString();
 
         for (String month : new String[]{YearMonth.now().plusMonths(1).toString(), "thang-9", ""}) {
-            mvc.perform(get("/admin/reports/revenue-daily").param("month", month))
+            mvc.perform(get("/admin/reports/chart-data").param("month", month))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.month").value(current))
                 .andExpect(jsonPath("$.maxMonth").value(current));
         }
-        mvc.perform(get("/admin/reports/revenue-daily"))
+        mvc.perform(get("/admin/reports/chart-data"))
             .andExpect(jsonPath("$.month").value(current));
     }
 
@@ -201,10 +201,28 @@ class AdminDashboardIntegrationTest {
             .andExpect(content().string(containsString("dailyRevenueTable")));
     }
 
+    // API tổng hợp mang đúng tên /chart-data; tên cũ đã bỏ.
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void oldDailyRevenueUrlIsGone() throws Exception {
+        mvc.perform(get("/admin/reports/revenue-daily"))
+            .andExpect(status().isNotFound());
+    }
+
+    // Trang có nhãn trạng thái realtime và nạp kết nối STOMP dùng chung (admin-realtime.js ở layout).
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void dashboardIsWiredForRealtimeChart() throws Exception {
+        mvc.perform(get("/admin"))
+            .andExpect(content().string(containsString("id=\"dailyLive\"")))
+            .andExpect(content().string(containsString("id=\"dailyUpdatedAt\"")))
+            .andExpect(content().string(containsString("/js/admin-realtime.js")));
+    }
+
     @Test
     @WithMockUser(roles = "USER")
     void normalUserCannotReadDailyRevenue() throws Exception {
-        mvc.perform(get("/admin/reports/revenue-daily"))
+        mvc.perform(get("/admin/reports/chart-data"))
             .andExpect(redirectedUrl("/admin/login?denied"));
     }
 
@@ -218,7 +236,7 @@ class AdminDashboardIntegrationTest {
     }
 
     // Layout chỉ nhúng <main> của trang con; script đặt sau </main> bị bỏ khi render và biểu đồ
-    // không bao giờ hiện — không lỗi, không cảnh báo. Test JSON /admin/reports/revenue-daily không bắt được.
+    // không bao giờ hiện — không lỗi, không cảnh báo. Test JSON /admin/reports/chart-data không bắt được.
     @Test
     @WithMockUser(roles = "ADMIN")
     void dashboardPageLoadsChartScripts() throws Exception {

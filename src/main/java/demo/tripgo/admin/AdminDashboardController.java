@@ -34,7 +34,7 @@ public class AdminDashboardController {
     //
     // month dạng yyyy-MM (đúng định dạng <input type="month"> gửi lên). Sai định dạng thì coi
     // như không chọn -> tháng hiện tại, thay vì trả lỗi 500 cho một tham số người dùng sửa tay.
-    @GetMapping("/admin/reports/revenue-daily")
+    @GetMapping("/admin/reports/chart-data")
     @ResponseBody
     public DailyRevenue dailyRevenue(@RequestParam(required = false) String month) {
         return dashboardService.dailyRevenue(parseMonth(month));
